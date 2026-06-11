@@ -393,7 +393,7 @@ FUNCIÓN: hearts_para_siguiente_nivel(level, current_hearts)
 > **Decisión de Hector (2026-06-11):** "borrar"/"eliminar" una misión pendiente es distinto
 > de "cancelarla". Cancelar es un acto narrativo (el personaje se entera, hay penalización
 > de corazones y escena de decepción). Borrar es administrativo: el usuario se equivocó al
-> crearla o ya no le interesa, y la misión desaparece como si nunca hubiera existido — sin
+> crearla o ya no le interesa, y la misión desaparece como si nunca hubiera existido. Sin
 > penalización, sin escena, sin tocar `heartsTotal` ni `level` del personaje.
 
 **Condición:** la misión debe estar `pending`. No se puede borrar una misión ya
