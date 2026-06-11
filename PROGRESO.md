@@ -1,12 +1,6 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 2 ✅ en master + borrar misión pendiente (PR `fix/delete-mission`)
-
-- [x] PR #2 (Fase 2) ya fusionada a `master`, junto con el deploy automático a GitHub Pages
-- [x] Nuevo: opción para borrar una misión pendiente sin penalización (no es lo mismo que
-      cancelar). Ver sesión (5) abajo, pendiente de revisión/merge en `fix/delete-mission`
-
-## Estado anterior: Fase 2 (Pantallas) ✅ completada
+## Estado actual: Fase 2 — Pantallas ✅ completada (pendiente prueba de Hector)
 
 - [x] Pantalla 1 — Home: 3 slots (ocupado/en riesgo/vacío), barra de corazones, nivel,
       lista de misiones pendientes ordenada por fecha, footer con acceso rápido
@@ -85,13 +79,16 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Próximo paso
 
-1. **Revisar y fusionar la PR `fix/delete-mission`**: agrega la opción de borrar una
-   misión pendiente sin penalización (sesión (5) abajo). Probar el flujo y darle Merge.
-2. **Hector prueba la app.** Ya no hace falta instalar nada: el deploy automático a
-   GitHub Pages quedó configurado sobre `master`, así que basta abrir el link publicado
-   y jugar el flujo completo ahí (crear personaje, crear misión, completarla, cancelar
-   una, llegar a 20 💕).
-3. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
+1. **Crear y fusionar la PR de la Fase 2** — la rama `claude/phase-1-game-engine-5m9wys`
+   tiene la Fase 2 completa pero AÚN NO está en `master` (la PR no se creó; Hector debe
+   pedir "crea la PR" o crearla él desde GitHub, y darle Merge)
+2. **Hector prueba la app en su compu.** Quedó a medias en la sesión del 2026-06-11:
+   descargó el ZIP (ojo: debe ser el de la RAMA, no el de master, mientras no se fusione
+   la PR), e iba por el paso de `cd` a la carpeta del proyecto en cmd. Pasos completos:
+   carpeta con `package.json` → `npm install` → `npm run dev` → http://localhost:5173
+3. **Alternativa recomendada para evitar la fricción técnica:** configurar GitHub Pages
+   (deploy automático, Hector abriría un link y ya — propuesto, aún sin respuesta)
+4. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
    la UI, ajustes que salgan de la prueba de Hector)
 
 ## Backlog (post-MVP)
@@ -106,24 +103,6 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
-
-### 2026-06-11 (5): Borrar misión pendiente sin penalización
-- Problema de Hector: no había forma de quitarse de encima una misión pendiente que ya
-  no se quería, salvo esperar a que venza o cancelarla (con penalización de corazones).
-  Eso dejaba "espacio muerto": el cupo de 3 misiones pendientes por personaje quedaba
-  ocupado por algo que el usuario no iba a hacer.
-- Solución: nueva opción "🗑 borrar esta misión (sin penalización)" en la pantalla de
-  "Marcar misión completa" (se llega tocando cualquier misión pendiente desde Home o
-  Perfil), debajo del link existente "cancelar esta misión". Pide confirmación porque
-  no se puede deshacer. Al borrar, la misión desaparece de la lista y libera el cupo
-  para crear una nueva.
-- Diferencia con "cancelar": cancelar es narrativo (penaliza corazones, dispara la
-  escena de decepción); borrar es administrativo (sin penalización, sin escena, no
-  toca al personaje).
-- Motor: nueva función pura `deleteMission` en `engine.ts` (solo permite borrar
-  misiones `pending`). 4 tests nuevos (68 en total, todos en verde). Build y lint limpios.
-- Decisión documentada en `mecanicas-detalle.md` §10.
-- PR `fix/delete-mission` → `master`, pendiente de revisión de Hector.
 
 ### 2026-06-11 (4) — Cierre de sesión
 - PR #1 (Fase 1) creada y fusionada a master por Hector ✅

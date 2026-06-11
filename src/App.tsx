@@ -15,7 +15,6 @@ import {
   completeMission,
   createCharacter,
   createMission,
-  deleteMission,
 } from './game/engine';
 import { loadState, saveState } from './storage';
 import { HomeScreen } from './ui/screens/HomeScreen';
@@ -152,18 +151,6 @@ export default function App() {
     setScreen({ name: 'cancellation-scene', characterId: mission.characterId, missionId, auto: false });
   }
 
-  function handleDeleteMission(missionId: string, from: Screen) {
-    const result = deleteMission(state, missionId);
-    if (!result.ok) {
-      setToast('Esta misión ya no está pendiente.');
-      setScreen({ name: 'home' });
-      return;
-    }
-    setState(result.state);
-    setScreen(from);
-    setToast('Misión borrada 🗑');
-  }
-
   function closeCancellationScene(characterId: string) {
     setState(acknowledgeCancellationScene(state, characterId));
     setScreen({ name: 'home' });
@@ -285,7 +272,6 @@ export default function App() {
           today={today}
           onComplete={() => handleCompleteMission(mission.id)}
           onCancelMission={() => handleCancelMission(mission.id)}
-          onDeleteMission={() => handleDeleteMission(mission.id, screen.from)}
           onBack={() => setScreen(screen.from)}
         />
       );

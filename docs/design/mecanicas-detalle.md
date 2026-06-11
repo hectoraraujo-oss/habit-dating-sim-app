@@ -388,26 +388,6 @@ FUNCIÓN: hearts_para_siguiente_nivel(level, current_hearts)
 
 ---
 
-## 10. Borrar misión pendiente (sin penalización)
-
-> **Decisión de Hector (2026-06-11):** "borrar"/"eliminar" una misión pendiente es distinto
-> de "cancelarla". Cancelar es un acto narrativo (el personaje se entera, hay penalización
-> de corazones y escena de decepción). Borrar es administrativo: el usuario se equivocó al
-> crearla o ya no le interesa, y la misión desaparece como si nunca hubiera existido. Sin
-> penalización, sin escena, sin tocar `heartsTotal` ni `level` del personaje.
-
-**Condición:** la misión debe estar `pending`. No se puede borrar una misión ya
-completada, fallida o cancelada (esas quedan en el historial).
-
-**Efecto:** la misión se elimina por completo de la lista de misiones. Esto también libera
-el cupo de misiones pendientes del personaje (máximo 3, ver `MAX_PENDING_MISSIONS_PER_CHARACTER`),
-permitiendo crear una nueva en su lugar.
-
-**Dónde vive en la UI:** Pantalla 4 (Marcar misión completa), como una opción discreta
-debajo de "cancelar esta misión", con confirmación porque no se puede deshacer.
-
----
-
 ## Decisiones pendientes para Hector
 
 *(Complementa las decisiones en flujo-pantallas.md — estas son específicas de mecánicas)*

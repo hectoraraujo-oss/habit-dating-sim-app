@@ -14,7 +14,6 @@ interface CompleteMissionScreenProps {
   today: string;
   onComplete: () => void;
   onCancelMission: () => void;
-  onDeleteMission: () => void;
   onBack: () => void;
 }
 
@@ -24,7 +23,6 @@ export function CompleteMissionScreen({
   today,
   onComplete,
   onCancelMission,
-  onDeleteMission,
   onBack,
 }: CompleteMissionScreenProps) {
   const expired = daysBetween(mission.deadline, today) > 0;
@@ -78,17 +76,6 @@ export function CompleteMissionScreen({
               className="mt-10 text-sm text-stone-400 underline transition hover:text-stone-600"
             >
               cancelar esta misión (−{penalty} 💕)
-            </button>
-
-            <button
-              onClick={() => {
-                if (window.confirm('¿Borrar esta misión? Desaparece sin afectar tus corazones ni tu nivel.')) {
-                  onDeleteMission();
-                }
-              }}
-              className="mt-2 text-xs text-stone-300 underline transition hover:text-stone-500"
-            >
-              🗑 borrar esta misión (sin penalización)
             </button>
           </>
         )}

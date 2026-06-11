@@ -247,22 +247,6 @@ export function cancelMission(state: GameState, missionId: string): CancelMissio
   return { ok: true, state: next, penalty };
 }
 
-export type DeleteMissionResult =
-  | { ok: true; state: GameState }
-  | { ok: false; error: 'mission_not_found' | 'mission_not_pending' };
-
-// Borrar/archivar una misión pendiente que el usuario ya no quiere. A diferencia de
-// cancelar, no aplica penalización de corazones, no agenda escena de cancelación y no
-// toca al personaje. La misión simplemente desaparece (decisión de Hector, 2026-06-11,
-// ver mecanicas-detalle §10).
-export function deleteMission(state: GameState, missionId: string): DeleteMissionResult {
-  const mission = state.missions.find((m) => m.id === missionId);
-  if (!mission) return { ok: false, error: 'mission_not_found' };
-  if (mission.status !== 'pending') return { ok: false, error: 'mission_not_pending' };
-
-  return { ok: true, state: { ...state, missions: state.missions.filter((m) => m.id !== missionId) } };
-}
-
 export type RescheduleMissionResult =
   | { ok: true; state: GameState; penalty: number; newMission: Mission }
   | { ok: false; error: 'mission_not_found' | 'mission_not_pending' };
