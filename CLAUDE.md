@@ -47,11 +47,15 @@ type MissionStatus = 'pending' | 'completed' | 'failed' | 'cancelled';
 interface Character {
   id: string;
   name: string;
-  slotNumber: 1 | 2 | 3;
+  slotNumber: 1 | 2 | 3 | null; // null = slot liberado (boda o abandono)
   status: CharacterStatus;
   level: 0 | 1 | 2 | 3;
+  // Único contador: baja con penalizaciones (mínimo 0). El nivel solo baja por abandono.
+  // Decisión de Hector, 2026-06-11 — ver nota en docs/testing/qa-report.md.
   heartsTotal: number;
+  createdDate: string;
   lastMissionCompletedDate: string | null;
+  inactivitySince: string; // ancla del reloj de abandono (nunca para; avanza 21 días por bajada)
   pendingAbandonmentScene: boolean;
   pendingCancellationScene: boolean;
 }

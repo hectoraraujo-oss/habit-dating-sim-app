@@ -191,6 +191,13 @@ T+1600ms BIFURCACIÓN:
 
 ## 6. Flujo automático: detección de abandono
 
+> **Decisión de Hector (2026-06-11):** el reloj de abandono nunca para. Por cada 21 días
+> completos de inactividad se aplica UNA bajada de nivel (con escena de abandono), y las
+> bajadas se acumulan si el usuario vuelve después de mucho tiempo (ej. 45 días en nivel 2 →
+> baja a nivel 0). En nivel 0, el siguiente período de 21 días hace que el personaje se vaya
+> (slot liberado). El contador se reinicia al completar una misión, y avanza 21 días por cada
+> bajada aplicada para no penalizar dos veces el mismo período.
+
 **Condición de activación:**
 `today - character.last_activity_date >= 21 días` Y `character.status = "active"`
 

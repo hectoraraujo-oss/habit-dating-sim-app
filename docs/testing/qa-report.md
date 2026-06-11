@@ -7,8 +7,18 @@
 
 ## Convenciones
 
-- `hearts_total` = acumulador de nivel (nunca baja)
-- `hearts_current` = display (sí baja con penalizaciones)
+> **Actualización 2026-06-11 (decisión de Hector):** se eliminó `hearts_current`. Existe un
+> ÚNICO contador `heartsTotal` que sube al completar misiones y BAJA con penalizaciones
+> (mínimo 0 — escenario A de TC-036). El progreso hacia el siguiente nivel sí retrocede al
+> cancelar. El `nivel` es un campo aparte: nunca baja por penalizaciones, solo por abandono.
+> Donde los TCs digan `hearts_current`, leer `heartsTotal`; donde digan "hearts_total no
+> cambia" por una penalización, ya no aplica (TC-007 se redefinió como "la penalización no
+> baja el nivel"). Además el reloj de abandono nunca para: cada 21 días completos de
+> inactividad baja un nivel adicional (acumulable), y en nivel 0 el personaje se va.
+> Los tests de Vitest (`src/game/qa-report.test.ts`) reflejan esta versión.
+
+- `hearts_total` = acumulador de nivel (nunca baja) — **obsoleto, ver nota de arriba**
+- `hearts_current` = display (sí baja con penalizaciones) — **obsoleto, ver nota de arriba**
 - Dificultades: Fácil / Media / Difícil
 - Umbrales de nivel: 0→1 = 20 | 1→2 = 60 | 2→3 = 140
 - Estado de caso: ⬜ Pendiente | ✅ Pasa | ❌ Falla | ⚠️ Comportamiento inesperado
