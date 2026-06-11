@@ -52,6 +52,14 @@ export function daysInactive(character: Character, today: string): number {
   return Math.max(0, daysBetween(character.inactivitySince, today));
 }
 
+export function completedMissionsCount(state: GameState, characterId: string): number {
+  return state.missions.filter((m) => m.characterId === characterId && m.status === 'completed').length;
+}
+
+export function daysTogether(character: Character, today: string): number {
+  return Math.max(0, daysBetween(character.createdDate, today));
+}
+
 // Estado de riesgo (14-20 días sin actividad) — solo visual, ver mecanicas-detalle §7.
 export function isAtRisk(character: Character, today: string): boolean {
   if (character.status !== 'active') return false;
@@ -287,6 +295,17 @@ export function checkExpiredMissions(state: GameState, today: string): ExpiredMi
     expiredMissionIds.push(mission.id);
   }
   return { state: next, expiredMissionIds };
+}
+
+// Las escenas se muestran una sola vez: la UI llama esto al cerrar la escena
+// (botón "Cerrar este capítulo" / "Entendido") para limpiar el flag.
+
+export function acknowledgeAbandonmentScene(state: GameState, characterId: string): GameState {
+  return patchCharacter(state, characterId, { pendingAbandonmentScene: false });
+}
+
+export function acknowledgeCancellationScene(state: GameState, characterId: string): GameState {
+  return patchCharacter(state, characterId, { pendingCancellationScene: false });
 }
 
 export interface AbandonmentEvent {
