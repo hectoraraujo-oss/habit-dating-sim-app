@@ -15,6 +15,7 @@ import {
   completeMission,
   createCharacter,
   createMission,
+  deleteCharacter,
 } from './game/engine';
 import { loadState, saveState } from './storage';
 import { HomeScreen } from './ui/screens/HomeScreen';
@@ -139,6 +140,18 @@ export default function App() {
     }
   }
 
+  function handleDeleteCharacter(characterId: string) {
+    const character = findCharacter(characterId);
+    const result = deleteCharacter(state, characterId);
+    if (!result.ok) {
+      setScreen({ name: 'home' });
+      return;
+    }
+    setState(result.state);
+    setScreen({ name: 'home' });
+    setToast(character ? `${character.name} fue eliminado.` : 'Personaje eliminado.');
+  }
+
   function handleCancelMission(missionId: string) {
     const mission = findMission(missionId);
     const result = cancelMission(state, missionId);
@@ -229,6 +242,7 @@ export default function App() {
             setScreen({ name: 'create-mission', characterId: character.id, from: screen })
           }
           onOpenMission={(missionId) => setScreen({ name: 'complete-mission', missionId, from: screen })}
+          onDeleteCharacter={() => handleDeleteCharacter(character.id)}
         />
       );
     }
