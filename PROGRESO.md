@@ -1,6 +1,39 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 1 — Motor del juego ✅ completada
+## Estado actual: Fase 2 — Pantallas ✅ completada (pendiente prueba de Hector)
+
+- [x] Pantalla 1 — Home: 3 slots (ocupado/en riesgo/vacío), barra de corazones, nivel,
+      lista de misiones pendientes ordenada por fecha, footer con acceso rápido
+- [x] Pantalla 2 — Perfil: sprite, nivel con etapa, barra, estadísticas (completadas,
+      corazones, canceladas), historial con pendientes al tope, botón crear misión
+- [x] Pantalla 3 — Crear misión: 3 campos, selector visual de dificultad, preview de
+      recompensa, deadline de mañana a 14 días (default +3), bloqueo con 3 pendientes
+- [x] Pantalla 4 — Marcar completa: botón grande "✓ Lo hice", preview +X 💕, link de
+      cancelar con su costo; variante de misión vencida ("Aceptar la pérdida")
+- [x] Pantalla 5 — Escena de nivel (con placeholder de imagen) + variante de BODA
+- [x] Pantalla 6 — Escena de abandono (variantes: se fue / bajó de nivel)
+- [x] Pantalla 7 — Escena de cancelación (manual y automática; aviso si corazones = 0)
+- [x] Crear personaje (formulario mínimo de nombre)
+- [x] Checks de vencimiento y abandono al abrir la app, con escenas encoladas en secuencia
+- [x] Persistencia automática en localStorage en cada cambio
+- [x] Placeholders de sprites/escenas copiados de docs/assets a src/assets
+- [x] Verificado en navegador real (Playwright): flujo completo crear personaje → crear
+      misión → completar → subir de nivel, sin errores de consola
+- [x] 64 tests en verde, build y lint limpios
+
+**Le toca a Hector:** correr `npm run dev`, abrir http://localhost:5173 y jugar el flujo
+completo. Qué mirar: crear personaje, crear misión, completarla (debería ver el toast de
+corazones), cancelar una (escena de decepción), y llegar a 20 💕 (escena de nivel).
+
+Simplificaciones de Fase 2 (deuda consciente):
+- El historial del perfil no agrupa por semana (lista simple con pendientes al tope)
+- Sin racha en estadísticas (está en backlog post-MVP)
+- Sin animaciones de corazones flotando ni conteo animado (la secuencia de
+  mecanicas-detalle §5 quedó como transiciones instantáneas)
+- Export/import JSON existe en `storage.ts` pero aún no tiene botón en la UI
+- El sprite se asigna por hash del id (no hay selector de sprite)
+
+## Estado anterior: Fase 1 — Motor del juego ✅ completada
 
 - [x] Fase 0 — Setup (cerrada: `npm run test` ya existe y corre en verde)
 - [x] Tipos en `src/types.ts` (Character, Mission, HappyEnding, GameState)
@@ -46,13 +79,17 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Próximo paso
 
-**Fase 2 — Pantallas** (ver `docs/build/PLAN-VSCODE.md` y `docs/design/flujo-pantallas.md`):
-
-1. Home: 3 slots, corazones, nivel, misiones pendientes, crear personaje
-2. Perfil de personaje + crear misión + completar misión
-3. Escenas: level-up, boda, abandono, cancelación (con placeholders de imagen)
-4. Conectar `loadState`/`saveState` y correr `checkExpiredMissions` + `checkAbandonment`
-   al cargar la app (equivalente al "page load del Home" de bubble-decisions)
+1. **Crear y fusionar la PR de la Fase 2** — la rama `claude/phase-1-game-engine-5m9wys`
+   tiene la Fase 2 completa pero AÚN NO está en `master` (la PR no se creó; Hector debe
+   pedir "crea la PR" o crearla él desde GitHub, y darle Merge)
+2. **Hector prueba la app en su compu.** Quedó a medias en la sesión del 2026-06-11:
+   descargó el ZIP (ojo: debe ser el de la RAMA, no el de master, mientras no se fusione
+   la PR), e iba por el paso de `cd` a la carpeta del proyecto en cmd. Pasos completos:
+   carpeta con `package.json` → `npm install` → `npm run dev` → http://localhost:5173
+3. **Alternativa recomendada para evitar la fricción técnica:** configurar GitHub Pages
+   (deploy automático, Hector abriría un link y ya — propuesto, aún sin respuesta)
+4. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
+   la UI, ajustes que salgan de la prueba de Hector)
 
 ## Backlog (post-MVP)
 
@@ -66,6 +103,22 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (4) — Cierre de sesión
+- PR #1 (Fase 1) creada y fusionada a master por Hector ✅
+- Fase 2 terminada y subida a la rama, SIN PR todavía
+- Hector empezó a probar la app localmente: descargó el ZIP y se quedó en el paso de
+  navegar con `cd` hasta la carpeta del proyecto en cmd (Windows). Instrucciones ya dadas
+- Pendiente de decidir: GitHub Pages para probar desde un link sin instalar nada
+
+### 2026-06-11 (3) — Fase 2: las 7 pantallas
+- UI completa en React + Tailwind: Home, Perfil, Crear personaje, Crear misión,
+  Marcar completa, y las 3 escenas (nivel/boda, abandono, cancelación)
+- `App.tsx` orquesta navegación, corre los checks al abrir y persiste cada cambio
+- Helpers de motor para la UI: `acknowledge*Scene`, `completedMissionsCount`,
+  `daysTogether` (con tests — 64 en total)
+- Placeholders de pixel art conectados (sprites por hash de id, escenas por nivel)
+- Verificación visual con Playwright: flujo completo sin errores de consola
 
 ### 2026-06-11 (2) — Decisiones de Hector aplicadas al motor
 - Hector eligió: contador único de corazones que retrocede con penalizaciones (clamp a 0),
