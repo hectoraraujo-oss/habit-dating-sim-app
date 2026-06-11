@@ -1,5 +1,10 @@
 // Port de los 42 casos de docs/testing/qa-report.md como tests de Vitest.
 // Cada test conserva su número TC-XXX para trazabilidad con el doc.
+//
+// Decisión de Hector (2026-06-11), refleja la nota al inicio de qa-report.md:
+// heartsTotal es el único contador y baja con penalizaciones (mínimo 0); el nivel
+// no baja por penalizaciones, solo por abandono. Los TCs que hablaban de
+// hearts_current se leen ahora sobre heartsTotal.
 
 import { describe, expect, it } from 'vitest';
 import type { Character, GameState, Mission } from '../types';
@@ -24,6 +29,8 @@ const TODAY = '2026-06-11';
 const FUTURE_DEADLINE = addDays(TODAY, 7);
 
 function makeCharacter(overrides: Partial<Character> = {}): Character {
+  const createdDate = overrides.createdDate ?? addDays(TODAY, -5);
+  const lastMissionCompletedDate = overrides.lastMissionCompletedDate ?? null;
   return {
     id: 'char-1',
     name: 'Gym',
@@ -31,9 +38,9 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     status: 'active',
     level: 0,
     heartsTotal: 0,
-    heartsCurrent: 0,
-    createdDate: addDays(TODAY, -5),
-    lastMissionCompletedDate: null,
+    createdDate,
+    lastMissionCompletedDate,
+    inactivitySince: lastMissionCompletedDate ?? createdDate,
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
     ...overrides,
@@ -79,118 +86,88 @@ describe('Área 1: Sistema de Corazones', () => {
   it('TC-001: suma correcta al completar misión Fácil', () => {
     const state = makeState([makeCharacter()], [makeMission({ difficulty: 'easy' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsTotal).toBe(5);
-    expect(character.heartsCurrent).toBe(5);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(5);
     expect(result.leveledUp).toBe(false);
   });
 
   it('TC-002: suma correcta al completar misión Media', () => {
     const state = makeState([makeCharacter()], [makeMission({ difficulty: 'medium' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsTotal).toBe(10);
-    expect(character.heartsCurrent).toBe(10);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(10);
     expect(result.leveledUp).toBe(false);
   });
 
   it('TC-003: suma correcta al completar misión Difícil', () => {
     const state = makeState([makeCharacter()], [makeMission({ difficulty: 'hard' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsTotal).toBe(18);
-    expect(character.heartsCurrent).toBe(18);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(18);
     expect(result.leveledUp).toBe(false);
   });
 
   it('TC-004: penalización correcta por cancelar misión Fácil', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
-      [makeMission({ difficulty: 'easy' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission({ difficulty: 'easy' })]);
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(7);
-    expect(character.heartsTotal).toBe(10);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(7);
   });
 
   it('TC-005: penalización correcta por cancelar misión Media', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
-      [makeMission({ difficulty: 'medium' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission({ difficulty: 'medium' })]);
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(5);
-    expect(character.heartsTotal).toBe(10);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(5);
   });
 
   it('TC-006: penalización correcta por cancelar misión Difícil', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 15, heartsCurrent: 15 })],
-      [makeMission({ difficulty: 'hard' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 15 })], [makeMission({ difficulty: 'hard' })]);
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(7);
-    expect(character.heartsTotal).toBe(15);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(7);
   });
 
-  it('TC-007: heartsTotal nunca baja con penalización', () => {
+  it('TC-007: la penalización resta heartsTotal pero el nivel no baja', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 50, heartsCurrent: 8, level: 1 })],
+      [makeCharacter({ heartsTotal: 50, level: 1 })],
       [makeMission({ difficulty: 'hard' })],
     );
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(0);
-    expect(character.heartsTotal).toBe(50);
+    expect(character.heartsTotal).toBe(42);
     expect(character.level).toBe(1);
   });
 
-  it('TC-008: heartsCurrent no puede bajar el nivel del personaje', () => {
+  it('TC-008: la penalización no baja el nivel aunque heartsTotal quede bajo el umbral', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 25, heartsCurrent: 25, level: 1 })],
+      [makeCharacter({ heartsTotal: 25, level: 1 })],
       [makeMission({ difficulty: 'hard' })],
     );
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(17);
-    expect(character.heartsTotal).toBe(25);
+    expect(character.heartsTotal).toBe(17);
     expect(character.level).toBe(1);
   });
 });
 
 describe('Área 2: Progresión de Niveles', () => {
   it('TC-009: subida de nivel 0 → 1 al cruzar el umbral de 20', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 15, heartsCurrent: 15 })],
-      [makeMission({ difficulty: 'medium' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 15 })], [makeMission({ difficulty: 'medium' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
     const character = getCharacter(result.state, 'char-1');
     expect(character.heartsTotal).toBe(25);
-    expect(character.heartsCurrent).toBe(25);
     expect(character.level).toBe(1);
     expect(result.leveledUp).toBe(true);
     expect(result.newLevel).toBe(1);
   });
 
   it('TC-010: no sube nivel con heartsTotal = 19 (un punto antes del umbral)', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 14, heartsCurrent: 14 })],
-      [makeMission({ difficulty: 'easy' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 14 })], [makeMission({ difficulty: 'easy' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
     const character = getCharacter(result.state, 'char-1');
     expect(character.heartsTotal).toBe(19);
@@ -200,7 +177,7 @@ describe('Área 2: Progresión de Niveles', () => {
 
   it('TC-011: subida de nivel 1 → 2 al cruzar el umbral de 60', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 55, heartsCurrent: 55, level: 1 })],
+      [makeCharacter({ heartsTotal: 55, level: 1 })],
       [makeMission({ difficulty: 'hard' })],
     );
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
@@ -212,10 +189,7 @@ describe('Área 2: Progresión de Niveles', () => {
   });
 
   it('TC-012: no sube dos niveles de golpe', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 18, heartsCurrent: 18 })],
-      [makeMission({ difficulty: 'hard' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 18 })], [makeMission({ difficulty: 'hard' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
     const character = getCharacter(result.state, 'char-1');
     expect(character.heartsTotal).toBe(36);
@@ -225,7 +199,7 @@ describe('Área 2: Progresión de Niveles', () => {
 
   it('TC-013: subida de nivel 2 → 3 al cruzar el umbral de 140 dispara boda', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 135, heartsCurrent: 135, level: 2 })],
+      [makeCharacter({ heartsTotal: 135, level: 2 })],
       [makeMission({ difficulty: 'hard' })],
     );
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
@@ -238,32 +212,26 @@ describe('Área 2: Progresión de Niveles', () => {
 
 describe('Área 3: Escenas', () => {
   it('TC-014: la escena de nivel aparece solo al cruzar umbral', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
-      [makeMission({ difficulty: 'easy' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission({ difficulty: 'easy' })]);
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
     expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(15);
     expect(result.leveledUp).toBe(false);
   });
 
   it('TC-015: escena de cancelación al cancelar una misión activa', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
-      [makeMission({ difficulty: 'easy' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission({ difficulty: 'easy' })]);
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const character = getCharacter(result.state, 'char-1');
     expect(character.pendingCancellationScene).toBe(true);
-    expect(character.heartsCurrent).toBe(7);
+    expect(character.heartsTotal).toBe(7);
     expect(getMission(result.state, 'mission-1').status).toBe('cancelled');
   });
 
   it('TC-016: escena de cancelación automática al vencer la fecha límite', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
+      [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -1) })],
     );
     const checked = checkExpiredMissions(state, TODAY);
@@ -271,7 +239,7 @@ describe('Área 3: Escenas', () => {
     expect(getMission(checked.state, 'mission-1').status).toBe('failed');
     const character = getCharacter(checked.state, 'char-1');
     expect(character.pendingCancellationScene).toBe(true);
-    expect(character.heartsCurrent).toBe(7);
+    expect(character.heartsTotal).toBe(7);
     // Tampoco se puede marcar como completada una misión ya vencida
     const attempt = completeMission(state, 'mission-1', TODAY);
     expect(attempt.kind).toBe('expired');
@@ -279,12 +247,7 @@ describe('Área 3: Escenas', () => {
 
   it('TC-017: escena de abandono exactamente a los 21 días sin actividad', () => {
     const state = makeState([
-      makeCharacter({
-        heartsTotal: 25,
-        heartsCurrent: 25,
-        level: 1,
-        lastMissionCompletedDate: addDays(TODAY, -21),
-      }),
+      makeCharacter({ heartsTotal: 25, level: 1, lastMissionCompletedDate: addDays(TODAY, -21) }),
     ]);
     const result = checkAbandonment(state, TODAY);
     expect(result.events).toHaveLength(1);
@@ -354,19 +317,56 @@ describe('Área 4: Abandono', () => {
   });
 });
 
+describe('Abandono escalonado — el reloj nunca para (decisión Hector, 2026-06-11)', () => {
+  it('45 días sin actividad en nivel 2: baja dos niveles acumulados (2 → 0)', () => {
+    const state = makeState([
+      makeCharacter({ level: 2, heartsTotal: 80, lastMissionCompletedDate: addDays(TODAY, -45) }),
+    ]);
+    const result = checkAbandonment(state, TODAY);
+    expect(result.events).toEqual([
+      { characterId: 'char-1', previousLevel: 2, newLevel: 0, slotFreed: false },
+    ]);
+    const character = getCharacter(result.state, 'char-1');
+    expect(character.level).toBe(0);
+    expect(character.status).toBe('active');
+    // El reloj avanzó 42 días: solo quedan 3 días "usados" de la siguiente ventana
+    expect(daysInactive(character, TODAY)).toBe(3);
+  });
+
+  it('43 días sin actividad en nivel 1: baja a 0 y el personaje se va', () => {
+    const state = makeState([
+      makeCharacter({ level: 1, heartsTotal: 25, lastMissionCompletedDate: addDays(TODAY, -43) }),
+    ]);
+    const result = checkAbandonment(state, TODAY);
+    const character = getCharacter(result.state, 'char-1');
+    expect(character.status).toBe('abandoned');
+    expect(character.slotNumber).toBeNull();
+    expect(character.heartsTotal).toBe(25);
+  });
+
+  it('el check es idempotente: correrlo dos veces el mismo día no penaliza doble', () => {
+    const state = makeState([
+      makeCharacter({ level: 2, heartsTotal: 80, lastMissionCompletedDate: addDays(TODAY, -21) }),
+    ]);
+    const first = checkAbandonment(state, TODAY);
+    expect(first.events).toHaveLength(1);
+    expect(getCharacter(first.state, 'char-1').level).toBe(1);
+    const second = checkAbandonment(first.state, TODAY);
+    expect(second.events).toHaveLength(0);
+    expect(getCharacter(second.state, 'char-1').level).toBe(1);
+  });
+});
+
 describe('Área 5: Cancelación', () => {
   it('TC-023: cambiar la fecha límite = cancelación automática + misión nueva', () => {
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
-      [makeMission({ difficulty: 'easy' })],
-    );
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission({ difficulty: 'easy' })]);
     const newDeadline = addDays(TODAY, 10);
     const result = rescheduleMission(state, 'mission-1', newDeadline);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(getMission(result.state, 'mission-1').status).toBe('cancelled');
     const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(7);
+    expect(character.heartsTotal).toBe(7);
     expect(character.pendingCancellationScene).toBe(true);
     expect(result.newMission.status).toBe('pending');
     expect(result.newMission.deadline).toBe(newDeadline);
@@ -375,7 +375,7 @@ describe('Área 5: Cancelación', () => {
 
   it('TC-024: misión vencida no puede marcarse como completada', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
+      [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -2) })],
     );
     const result = completeMission(state, 'mission-1', TODAY);
@@ -383,27 +383,26 @@ describe('Área 5: Cancelación', () => {
     if (result.kind !== 'expired') return;
     expect(getMission(result.state, 'mission-1').status).toBe('failed');
     const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(7);
-    expect(character.heartsTotal).toBe(10);
+    expect(character.heartsTotal).toBe(7);
     expect(character.pendingCancellationScene).toBe(true);
   });
 
   it('TC-025: penalización correcta en cancelación automática por vencimiento', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 20, heartsCurrent: 20 })],
+      [makeCharacter({ heartsTotal: 20, level: 1 })],
       [makeMission({ difficulty: 'medium', deadline: addDays(TODAY, -1) })],
     );
     const result = checkExpiredMissions(state, TODAY);
     const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(15);
-    expect(character.heartsTotal).toBe(20);
+    expect(character.heartsTotal).toBe(15);
+    expect(character.level).toBe(1);
   });
 });
 
 describe('Área 6: Nivel 3 / Boda', () => {
   function weddingState(): GameState {
     return makeState(
-      [makeCharacter({ heartsTotal: 139, heartsCurrent: 139, level: 2 })],
+      [makeCharacter({ heartsTotal: 139, level: 2 })],
       [makeMission({ difficulty: 'easy' })],
     );
   }
@@ -431,7 +430,7 @@ describe('Área 6: Nivel 3 / Boda', () => {
   it('TC-028: slot liberado correctamente después de la boda', () => {
     const state = makeState(
       [
-        makeCharacter({ id: 'char-1', heartsTotal: 139, heartsCurrent: 139, level: 2, slotNumber: 1 }),
+        makeCharacter({ id: 'char-1', heartsTotal: 139, level: 2, slotNumber: 1 }),
         makeCharacter({ id: 'char-2', name: 'Leer', slotNumber: 2 }),
         makeCharacter({ id: 'char-3', name: 'Meditar', slotNumber: 3 }),
       ],
@@ -447,7 +446,7 @@ describe('Área 6: Nivel 3 / Boda', () => {
 
   it('TC-029: personaje en HappyEnding no tiene misiones activas ni genera triggers', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 139, heartsCurrent: 139, level: 2 })],
+      [makeCharacter({ heartsTotal: 139, level: 2 })],
       [
         makeMission({ id: 'mission-1', difficulty: 'easy' }),
         makeMission({ id: 'mission-2', name: 'Otra misión' }),
@@ -531,24 +530,19 @@ describe('Área 8: Edge Cases', () => {
     expect(levelForHearts(20)).toBe(1);
   });
 
-  it('TC-036: penalización que llevaría heartsCurrent a negativo se clampea a 0', () => {
-    // Decisión: escenario A de qa-report (clamp a 0), consistente con mecanicas-detalle §3.
-    const state = makeState(
-      [makeCharacter({ heartsTotal: 30, heartsCurrent: 4, level: 1 })],
-      [makeMission({ difficulty: 'hard' })],
-    );
+  it('TC-036: penalización que llevaría heartsTotal a negativo se clampea a 0', () => {
+    // mecanicas-detalle §3: el mínimo es 0, sin "deuda" de corazones.
+    const state = makeState([makeCharacter({ heartsTotal: 4 })], [makeMission({ difficulty: 'hard' })]);
     const result = cancelMission(state, 'mission-1');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(0);
-    expect(character.heartsTotal).toBe(30);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(0);
   });
 
   it('TC-037: slot recién liberado por boda disponible para nuevo personaje', () => {
     const state = makeState(
       [
-        makeCharacter({ id: 'char-1', heartsTotal: 139, heartsCurrent: 139, level: 2, slotNumber: 1 }),
+        makeCharacter({ id: 'char-1', heartsTotal: 139, level: 2, slotNumber: 1 }),
         makeCharacter({ id: 'char-2', name: 'Leer', slotNumber: 2 }),
         makeCharacter({ id: 'char-3', name: 'Meditar', slotNumber: 3 }),
       ],
@@ -586,21 +580,19 @@ describe('Área 8: Edge Cases', () => {
 
   it('TC-040: misión completada un día después de la fecha límite está vencida', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 10, heartsCurrent: 10 })],
+      [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -1) })],
     );
     const result = completeMission(state, 'mission-1', TODAY);
     expect(result.kind).toBe('expired');
     if (result.kind !== 'expired') return;
     expect(getMission(result.state, 'mission-1').status).toBe('failed');
-    const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsCurrent).toBe(7);
-    expect(character.heartsTotal).toBe(10);
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(7);
   });
 
   it('TC-041: acumulación de penalizaciones en la misma sesión no rompe el estado', () => {
     let state = makeState(
-      [makeCharacter({ heartsTotal: 60, heartsCurrent: 30, level: 2 })],
+      [makeCharacter({ heartsTotal: 60, level: 2 })],
       [
         makeMission({ id: 'mission-1', difficulty: 'easy' }),
         makeMission({ id: 'mission-2', difficulty: 'medium', name: 'Media' }),
@@ -615,15 +607,14 @@ describe('Área 8: Edge Cases', () => {
       expect(getCharacter(state, 'char-1').pendingCancellationScene).toBe(true);
     }
     const character = getCharacter(state, 'char-1');
-    expect(character.heartsCurrent).toBe(14);
-    expect(character.heartsTotal).toBe(60);
+    expect(character.heartsTotal).toBe(44);
     expect(character.level).toBe(2);
     expect(state.missions.every((m) => m.status === 'cancelled')).toBe(true);
   });
 
   it('TC-042: el abandono baja el nivel pero heartsTotal se mantiene', () => {
     const state = makeState([
-      makeCharacter({ heartsTotal: 25, heartsCurrent: 25, level: 1, lastMissionCompletedDate: addDays(TODAY, -21) }),
+      makeCharacter({ heartsTotal: 25, level: 1, lastMissionCompletedDate: addDays(TODAY, -21) }),
     ]);
     const result = checkAbandonment(state, TODAY);
     const character = getCharacter(result.state, 'char-1');

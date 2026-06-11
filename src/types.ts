@@ -1,9 +1,10 @@
 // Modelo de datos del juego — ver docs/build/bubble-schema.md y docs/testing/qa-report.md.
 //
-// Convención de corazones (de qa-report.md):
-// - heartsTotal: acumulador de nivel. Solo sube. Decide las subidas de nivel.
-// - heartsCurrent: contador visible. Baja con penalizaciones (clamp a 0), sube al completar.
-// El nivel es un campo independiente: sube al cruzar umbrales y solo baja por abandono.
+// Convención de corazones (decisión de Hector, 2026-06-11 — alineada con bubble-schema.md):
+// - heartsTotal es el ÚNICO contador. Sube al completar misiones y BAJA con penalizaciones
+//   (cancelar / dejar vencer), con mínimo 0. El progreso hacia el siguiente nivel retrocede.
+// - level es un campo independiente: sube al cruzar umbrales (20/60/140) y solo baja por
+//   abandono (inactividad de 21 días) — nunca por penalizaciones de corazones.
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type CharacterStatus = 'active' | 'happy_ending' | 'abandoned';
@@ -14,15 +15,18 @@ export type Level = 0 | 1 | 2 | 3;
 export interface Character {
   id: string;
   name: string;
-  // null cuando el slot fue liberado (boda o abandono en nivel 0)
+  // null cuando el slot fue liberado (boda o abandono)
   slotNumber: SlotNumber | null;
   status: CharacterStatus;
   level: Level;
   heartsTotal: number;
-  heartsCurrent: number;
-  // Fecha ISO (YYYY-MM-DD). Si nunca completó una misión, la inactividad se cuenta desde aquí.
+  // Fecha ISO (YYYY-MM-DD)
   createdDate: string;
   lastMissionCompletedDate: string | null;
+  // Ancla del reloj de abandono: arranca en createdDate, se reinicia al completar una misión
+  // y avanza 21 días por cada bajada de nivel aplicada (el reloj nunca para — decisión de
+  // Hector, 2026-06-11). lastMissionCompletedDate queda como dato histórico/visible.
+  inactivitySince: string;
   pendingAbandonmentScene: boolean;
   pendingCancellationScene: boolean;
 }

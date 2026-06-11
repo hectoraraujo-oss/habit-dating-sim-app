@@ -1,6 +1,12 @@
 // Motor del juego: funciones puras sobre GameState. Ninguna toca localStorage ni el reloj;
 // la fecha "hoy" siempre llega como parámetro (ISO YYYY-MM-DD) para poder testear.
 // Reglas: docs/design/mecanicas-detalle.md, docs/build/bubble-decisions.md, docs/testing/qa-report.md.
+//
+// Decisiones de Hector (2026-06-11):
+// - heartsTotal es el único contador y BAJA con penalizaciones (mínimo 0). El nivel no baja
+//   por penalizaciones — solo por abandono.
+// - El reloj de abandono nunca para: cada 21 días completos de inactividad baja un nivel;
+//   en nivel 0 el personaje se va. Varias bajadas pueden acumularse en un solo check.
 
 import type {
   Character,
@@ -20,7 +26,7 @@ import {
   MAX_PENDING_MISSIONS_PER_CHARACTER,
   SLOT_NUMBERS,
 } from './constants';
-import { daysBetween } from './dates';
+import { addDays, daysBetween } from './dates';
 import { calcHeartsEarned } from './hearts';
 
 function newId(): string {
@@ -43,8 +49,7 @@ export function freeSlots(state: GameState): SlotNumber[] {
 }
 
 export function daysInactive(character: Character, today: string): number {
-  const reference = character.lastMissionCompletedDate ?? character.createdDate;
-  return Math.max(0, daysBetween(reference, today));
+  return Math.max(0, daysBetween(character.inactivitySince, today));
 }
 
 // Estado de riesgo (14-20 días sin actividad) — solo visual, ver mecanicas-detalle §7.
@@ -74,13 +79,14 @@ function getCharacter(state: GameState, id: string): Character | undefined {
   return state.characters.find((c) => c.id === id);
 }
 
-// Penalización compartida por cancelación manual y vencimiento: heartsCurrent baja
-// (clamp a 0, TC-036 escenario A), heartsTotal no cambia, se agenda la escena de cancelación.
+// Penalización compartida por cancelación manual y vencimiento: heartsTotal baja
+// (clamp a 0, mecanicas-detalle §3 — sin "deuda"), el nivel NO baja, y se agenda
+// la escena de cancelación.
 function applyPenalty(state: GameState, characterId: string, penalty: number): GameState {
   const character = getCharacter(state, characterId);
   if (!character) return state;
   return patchCharacter(state, characterId, {
-    heartsCurrent: Math.max(0, character.heartsCurrent - penalty),
+    heartsTotal: Math.max(0, character.heartsTotal - penalty),
     pendingCancellationScene: true,
   });
 }
@@ -101,9 +107,9 @@ export function createCharacter(state: GameState, name: string, today: string): 
     status: 'active',
     level: 0,
     heartsTotal: 0,
-    heartsCurrent: 0,
     createdDate: today,
     lastMissionCompletedDate: null,
+    inactivitySince: today,
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
   };
@@ -185,8 +191,8 @@ export function completeMission(state: GameState, missionId: string, today: stri
 
   next = patchCharacter(next, character.id, {
     heartsTotal,
-    heartsCurrent: character.heartsCurrent + heartsEarned,
     lastMissionCompletedDate: today,
+    inactivitySince: today,
     level,
   });
 
@@ -295,26 +301,36 @@ export interface AbandonmentResult {
   events: AbandonmentEvent[];
 }
 
-// Check al abrir la app: 21+ días sin completar misiones (bubble-decisions Workflow 2/5).
-// - Nivel > 0: baja un nivel, conserva el slot, se agenda la escena de abandono.
-// - Nivel 0: el personaje "te corta" — status abandoned, slot liberado, pendientes a failed
-//   sin penalización extra.
+// Check al abrir la app (bubble-decisions Workflow 2/5). El reloj nunca para: por cada
+// 21 días completos desde inactivitySince se aplica una bajada de nivel; en nivel 0 el
+// personaje se va (status abandoned, slot liberado, pendientes a failed sin penalización
+// extra). El ancla avanza 21 días por bajada aplicada, así el check es idempotente y las
+// bajadas se acumulan si el usuario vuelve después de mucho tiempo.
 // heartsTotal nunca cambia por abandono (TC-017/TC-042).
 export function checkAbandonment(state: GameState, today: string): AbandonmentResult {
   let next = state;
   const events: AbandonmentEvent[] = [];
   for (const character of state.characters) {
     if (character.status !== 'active') continue;
-    // Escena previa todavía sin mostrar: no acumular otra penalización encima.
-    if (character.pendingAbandonmentScene) continue;
-    if (daysInactive(character, today) < ABANDONMENT_DAYS) continue;
+    const periods = Math.floor(daysInactive(character, today) / ABANDONMENT_DAYS);
+    if (periods <= 0) continue;
 
-    if (character.level > 0) {
-      const newLevel = (character.level - 1) as Level;
-      next = patchCharacter(next, character.id, { level: newLevel, pendingAbandonmentScene: true });
-      events.push({ characterId: character.id, previousLevel: character.level, newLevel, slotFreed: false });
-    } else {
+    let level = character.level;
+    let abandoned = false;
+    let periodsApplied = 0;
+    for (let i = 0; i < periods; i++) {
+      periodsApplied++;
+      if (level > 0) {
+        level = (level - 1) as Level;
+      } else {
+        abandoned = true;
+        break;
+      }
+    }
+
+    if (abandoned) {
       next = patchCharacter(next, character.id, {
+        level,
         status: 'abandoned',
         slotNumber: null,
         pendingAbandonmentScene: true,
@@ -325,8 +341,14 @@ export function checkAbandonment(state: GameState, today: string): AbandonmentRe
           m.characterId === character.id && m.status === 'pending' ? { ...m, status: 'failed' as const } : m,
         ),
       };
-      events.push({ characterId: character.id, previousLevel: 0, newLevel: 0, slotFreed: true });
+    } else {
+      next = patchCharacter(next, character.id, {
+        level,
+        pendingAbandonmentScene: true,
+        inactivitySince: addDays(character.inactivitySince, periodsApplied * ABANDONMENT_DAYS),
+      });
     }
+    events.push({ characterId: character.id, previousLevel: character.level, newLevel: level, slotFreed: abandoned });
   }
   return { state: next, events };
 }

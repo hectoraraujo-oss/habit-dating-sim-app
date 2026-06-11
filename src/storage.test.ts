@@ -30,9 +30,9 @@ function sampleState(): GameState {
     status: 'active',
     level: 1,
     heartsTotal: 25,
-    heartsCurrent: 25,
     createdDate: '2026-05-01',
     lastMissionCompletedDate: '2026-06-10',
+    inactivitySince: '2026-06-10',
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
   });

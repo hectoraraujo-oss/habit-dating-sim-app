@@ -14,33 +14,35 @@
     vencimiento y abandono, boda/HappyEnding
 - [x] Script `"test": "vitest run"` en `package.json` (y `test:watch`)
 - [x] Los 42 casos de `docs/testing/qa-report.md` portados como tests (`src/game/qa-report.test.ts`,
-      con su número TC-XXX) + tests unitarios de corazones y storage
-- [x] **56 tests en verde**, `npm run build` y `npm run lint` limpios
+      con su número TC-XXX) + tests del abandono escalonado + unitarios de corazones y storage
+- [x] **59 tests en verde**, `npm run build` y `npm run lint` limpios
 
-## Decisiones tomadas en esta sesión (confirmar con Hector)
+## Decisiones de diseño (confirmadas por Hector el 2026-06-11)
 
-1. **Dos contadores de corazones** (`heartsTotal` + `heartsCurrent`), siguiendo la convención de
-   `qa-report.md`: `heartsTotal` solo sube y decide los niveles; `heartsCurrent` es el visible,
-   baja con penalizaciones. **Ojo:** esto contradice `docs/build/bubble-schema.md`, que dice
-   eliminar `hearts_current` y dejar que `hearts_total` baje. Se siguió el QA report porque los
-   42 casos de prueba son el contrato. Si Hector prefiere lo del schema, hay que actualizar
-   tests y motor juntos.
-2. **TC-036 (penalización a negativo):** escenario A — `heartsCurrent` se clampea a 0, nunca
-   negativo (consistente con `mecanicas-detalle.md` §3).
+1. **Un solo contador de corazones (`heartsTotal`) que SÍ baja con penalizaciones** (cancelar
+   o dejar vencer resta de verdad y el progreso al siguiente nivel retrocede), con mínimo 0
+   (sin negativo). El nivel es campo aparte: nunca baja por penalizaciones, solo por abandono.
+   Elegido por Hector entre las dos versiones contradictorias de los docs (ganó la de
+   `bubble-schema.md`; se dejó nota de obsolescencia en `qa-report.md` y los tests se
+   adaptaron).
+2. **El reloj de abandono nunca para:** cada 21 días completos sin actividad baja un nivel,
+   las bajadas se acumulan si se vuelve después de mucho tiempo, y en nivel 0 el personaje se
+   va (slot liberado). Implementado con un ancla `inactivitySince` que se reinicia al
+   completar misión y avanza 21 días por bajada aplicada (check idempotente). Nota agregada
+   a `mecanicas-detalle.md` §6.
+
+Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector):
+
 3. **Misión vencida no se puede completar** (TC-024/TC-040): pasa a `failed` con penalización.
    El multiplicador por retraso de `mecanicas-detalle.md` §4 quedó implementado como función
    pura (`hearts.ts`) por fidelidad al doc, pero en el flujo actual nunca aplica.
-4. **Campos extra vs. el modelo de CLAUDE.md:** se agregaron `heartsCurrent` y `createdDate`
-   (necesario para contar inactividad si nunca se completó misión), y `slotNumber` acepta
-   `null` (slot liberado por boda o abandono en nivel 0).
+4. **Campos extra vs. el modelo original:** `createdDate` (inactividad si nunca se completó
+   misión), `inactivitySince` (ancla del reloj de abandono) y `slotNumber` nullable (slot
+   liberado). CLAUDE.md actualizado.
 5. **Boda:** las misiones pendientes restantes del personaje se cierran como `cancelled` SIN
    penalización (TC-029 exige que no queden pendientes; el doc no especificaba).
-6. **Abandono en nivel 0:** pendientes pasan a `failed` sin penalización extra
+6. **Abandono definitivo:** pendientes pasan a `failed` sin penalización extra
    (bubble-decisions Workflow 5).
-7. **Pendiente de definir:** tras un abandono que baja nivel (personaje sigue activo), el
-   contador de 21 días no se reinicia; por ahora `checkAbandonment` no vuelve a penalizar
-   mientras `pendingAbandonmentScene` siga en `true`. Definir cuándo arranca la siguiente
-   ventana de 21 días (¿al mostrar la escena?).
 
 ## Próximo paso
 
@@ -64,6 +66,13 @@
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (2) — Decisiones de Hector aplicadas al motor
+- Hector eligió: contador único de corazones que retrocede con penalizaciones (clamp a 0),
+  y reloj de abandono que nunca para (bajadas de nivel acumulables, en nivel 0 se va)
+- Motor y tests reescritos a ese modelo; campo `inactivitySince` agregado al Character
+- Notas de decisión agregadas a `qa-report.md`, `mecanicas-detalle.md` y `CLAUDE.md`
+- 59 tests en verde
 
 ### 2026-06-11 — Fase 1: motor del juego
 - Tipos, constantes, helpers de fecha, cálculo de corazones/niveles y motor de acciones
