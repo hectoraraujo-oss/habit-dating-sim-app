@@ -1,6 +1,6 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 2 — Pantallas ✅ completada (pendiente prueba de Hector)
+## Estado actual: Fases 0, 1 y 2 completas + fix delete-character — listo para Fase 3
 
 - [x] Pantalla 1 — Home: 3 slots (ocupado/en riesgo/vacío), barra de corazones, nivel,
       lista de misiones pendientes ordenada por fecha, footer con acceso rápido
@@ -21,9 +21,9 @@
       misión → completar → subir de nivel, sin errores de consola
 - [x] 64 tests en verde, build y lint limpios
 
-**Le toca a Hector:** correr `npm run dev`, abrir http://localhost:5173 y jugar el flujo
-completo. Qué mirar: crear personaje, crear misión, completarla (debería ver el toast de
-corazones), cancelar una (escena de decepción), y llegar a 20 💕 (escena de nivel).
+**Estado:** PR #2 (Fase 2) y PR #3 (eliminar personaje) ya están mergeadas a `master`.
+La app está publicada en GitHub Pages: https://hectoraraujo-oss.github.io/habit-dating-sim-app/.
+Hector puede jugar el flujo completo desde ahí sin instalar nada.
 
 Simplificaciones de Fase 2 (deuda consciente):
 - El historial del perfil no agrupa por semana (lista simple con pendientes al tope)
@@ -79,14 +79,22 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Próximo paso
 
-1. **Hector revisa y mergea la PR #3** (`fix/delete-mission`): ahora agrega "Eliminar
-   personaje" (con confirmación), ya no "borrar misión pendiente".
-2. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
-   la UI).
+**Fase 3 — Triggers de tiempo** (`docs/build/PLAN-VSCODE.md` §6): el criterio de salida
+("al abrir la app se evalúan deadlines vencidos y abandonos, encolados como escenas") ya
+quedó implementado desde Fase 2: `initGame` en `App.tsx` corre `checkExpiredMissions` y
+`checkAbandonment` al cargar, y la lógica está cubierta por `qa-report.test.ts`. Lo que
+falta para cerrar Fase 3 formalmente:
+
+1. **Verificación manual de Hector**: dejar pasar el deadline de una misión real (cambiando
+   la fecha del sistema o esperando) y confirmar que, al reabrir la app, aparece la escena
+   de cancelación (y la de abandono si pasan 21+ días sin actividad). Si esto se confirma,
+   Fase 3 se marca completa sin trabajo de código adicional.
+2. Si Hector lo aprueba, pasar a **Fase 4 — Pulido** (estética dating-sim, animaciones de
+   corazones) o resolver primero la deuda de Fase 2 (export/import JSON en la UI), a
+   decidir con Hector cuál va primero.
 
 ## Backlog (post-MVP)
 
-- Mensaje al intentar crear un 4to personaje ("las 3 habitaciones están ocupadas")
 - Sincronización multi-dispositivo (Supabase)
 - Sonido, más escenas, personalización de sprites
 - Galería "Happy Endings"
@@ -96,6 +104,17 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (6) — Cierre de sesión: PRs #2 y #3 mergeadas + GitHub Pages
+- PR #2 (Fase 2: las 7 pantallas) mergeada a `master`.
+- GitHub Pages configurado y funcionando: la app está publicada en
+  https://hectoraraujo-oss.github.io/habit-dating-sim-app/, deploy automático en cada
+  push a `master`.
+- PR #3 (eliminar personaje completo, con confirmación) mergeada a `master`.
+- 67 tests en verde, `npm run build` y `npm run lint` limpios en `master`.
+- Revisión de Fase 3: el criterio de "checks de vencimiento y abandono al abrir la app"
+  ya estaba implementado desde Fase 2 (`initGame` en `App.tsx`). Próximo paso documentado
+  arriba.
 
 ### 2026-06-11 (5) — PR #3: Eliminar personaje
 - Se reemplazó el alcance de la PR #3 (antes "borrar misión pendiente", revertido) por
