@@ -9,7 +9,10 @@ import {
   acknowledgeCancellationScene,
   checkAbandonment,
   completedMissionsCount,
+  createCharacter,
   daysTogether,
+  deleteCharacter,
+  freeSlots,
   isAtRisk,
 } from './engine';
 
@@ -96,5 +99,43 @@ describe('estadísticas para pantallas', () => {
     expect(isAtRisk(makeCharacter({ lastMissionCompletedDate: addDays(TODAY, -14) }), TODAY)).toBe(true);
     expect(isAtRisk(makeCharacter({ lastMissionCompletedDate: addDays(TODAY, -20) }), TODAY)).toBe(true);
     expect(isAtRisk(makeCharacter({ lastMissionCompletedDate: addDays(TODAY, -21) }), TODAY)).toBe(false);
+  });
+});
+
+describe('deleteCharacter', () => {
+  it('elimina al personaje y todas sus misiones, sin tocar las de otros personajes', () => {
+    const state = makeState(
+      [makeCharacter({ id: 'char-1' }), makeCharacter({ id: 'char-2', name: 'Lectura', slotNumber: 2 })],
+      [
+        makeMission({ id: 'm1', characterId: 'char-1', status: 'pending' }),
+        makeMission({ id: 'm2', characterId: 'char-1', status: 'completed', completedDate: TODAY, heartsAwarded: 5 }),
+        makeMission({ id: 'm3', characterId: 'char-2', status: 'pending' }),
+      ],
+    );
+    const result = deleteCharacter(state, 'char-1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.characters.map((c) => c.id)).toEqual(['char-2']);
+    expect(result.state.missions.map((m) => m.id)).toEqual(['m3']);
+  });
+
+  it('libera el slot para crear un personaje nuevo', () => {
+    const state = makeState([makeCharacter({ slotNumber: 1 })]);
+    expect(freeSlots(state)).toEqual([2, 3]);
+
+    const result = deleteCharacter(state, 'char-1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(freeSlots(result.state)).toEqual([1, 2, 3]);
+
+    const created = createCharacter(result.state, 'Nuevo hábito', TODAY);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.character.slotNumber).toBe(1);
+  });
+
+  it('devuelve error si el personaje no existe', () => {
+    const state = makeState([makeCharacter()]);
+    expect(deleteCharacter(state, 'no-existe')).toEqual({ ok: false, error: 'character_not_found' });
   });
 });

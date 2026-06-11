@@ -1,5 +1,6 @@
 // Pantalla 2: Perfil de personaje — detalle, estadísticas e historial (flujo-pantallas.md).
 
+import { useState } from 'react';
 import type { Character, GameState, Mission } from '../../types';
 import { completedMissionsCount, daysTogether } from '../../game/engine';
 import { DIFFICULTY_LABEL, formatDeadline, LEVEL_STAGE } from '../format';
@@ -13,6 +14,7 @@ interface ProfileScreenProps {
   onBack: () => void;
   onCreateMission: () => void;
   onOpenMission: (missionId: string) => void;
+  onDeleteCharacter: () => void;
 }
 
 export function ProfileScreen({
@@ -22,7 +24,9 @@ export function ProfileScreen({
   onBack,
   onCreateMission,
   onOpenMission,
+  onDeleteCharacter,
 }: ProfileScreenProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const missions = state.missions.filter((m) => m.characterId === character.id);
   const pending = missions
     .filter((m) => m.status === 'pending')
@@ -89,6 +93,15 @@ export function ProfileScreen({
             </ul>
           )}
         </section>
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="text-xs text-stone-400 underline transition hover:text-red-500"
+          >
+            Eliminar personaje
+          </button>
+        </div>
       </main>
 
       <footer className="sticky bottom-0 border-t-4 border-pink-200 bg-white px-4 py-3">
@@ -101,6 +114,31 @@ export function ProfileScreen({
           </button>
         </div>
       </footer>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 text-center shadow-xl">
+            <p className="text-sm text-stone-700">
+              ¿Seguro que quieres eliminar a {character.name}? Esto borrará el personaje y todos sus
+              hábitos para siempre.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={onDeleteCharacter}
+                className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-600"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

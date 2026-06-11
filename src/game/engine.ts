@@ -124,6 +124,26 @@ export function createCharacter(state: GameState, name: string, today: string): 
   return { ok: true, state: { ...state, characters: [...state.characters, character] }, character };
 }
 
+export type DeleteCharacterResult =
+  | { ok: true; state: GameState }
+  | { ok: false; error: 'character_not_found' };
+
+// Eliminar un personaje completo y todas sus misiones (decision de Hector, 2026-06-11:
+// el usuario quiere poder dejar un habito ya, sin esperar a que falle solo). Libera el
+// slot para crear un personaje nuevo. No toca happyEndings: son registro historico
+// independiente del personaje que los origino.
+export function deleteCharacter(state: GameState, characterId: string): DeleteCharacterResult {
+  if (!getCharacter(state, characterId)) return { ok: false, error: 'character_not_found' };
+  return {
+    ok: true,
+    state: {
+      ...state,
+      characters: state.characters.filter((c) => c.id !== characterId),
+      missions: state.missions.filter((m) => m.characterId !== characterId),
+    },
+  };
+}
+
 export type CreateMissionError = 'character_not_found' | 'character_not_active' | 'pending_limit_reached';
 
 export type CreateMissionResult =

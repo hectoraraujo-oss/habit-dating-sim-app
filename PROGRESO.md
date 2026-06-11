@@ -79,17 +79,10 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Próximo paso
 
-1. **Crear y fusionar la PR de la Fase 2** — la rama `claude/phase-1-game-engine-5m9wys`
-   tiene la Fase 2 completa pero AÚN NO está en `master` (la PR no se creó; Hector debe
-   pedir "crea la PR" o crearla él desde GitHub, y darle Merge)
-2. **Hector prueba la app en su compu.** Quedó a medias en la sesión del 2026-06-11:
-   descargó el ZIP (ojo: debe ser el de la RAMA, no el de master, mientras no se fusione
-   la PR), e iba por el paso de `cd` a la carpeta del proyecto en cmd. Pasos completos:
-   carpeta con `package.json` → `npm install` → `npm run dev` → http://localhost:5173
-3. **Alternativa recomendada para evitar la fricción técnica:** configurar GitHub Pages
-   (deploy automático, Hector abriría un link y ya — propuesto, aún sin respuesta)
-4. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
-   la UI, ajustes que salgan de la prueba de Hector)
+1. **Hector revisa y mergea la PR #3** (`fix/delete-mission`): ahora agrega "Eliminar
+   personaje" (con confirmación), ya no "borrar misión pendiente".
+2. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
+   la UI).
 
 ## Backlog (post-MVP)
 
@@ -103,6 +96,20 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (5) — PR #3: Eliminar personaje
+- Se reemplazó el alcance de la PR #3 (antes "borrar misión pendiente", revertido) por
+  "eliminar personaje completo": `deleteCharacter` en `engine.ts` borra al personaje y
+  todas sus misiones, y libera su slot (67 tests en verde).
+- UI: botón discreto "Eliminar personaje" al fondo de `ProfileScreen`, con diálogo de
+  confirmación ("¿Seguro que quieres eliminar a [nombre]? Esto borrará el personaje y
+  todos sus hábitos para siempre.") y botones Cancelar/Eliminar.
+- `App.tsx` conecta el flujo: al confirmar, el personaje desaparece del Home, el slot
+  queda libre y aparece un toast "[nombre] fue eliminado."
+- Verificado en navegador: crear personaje, abrir su perfil, eliminar, vuelve a Home con
+  el slot libre y el toast correcto.
+- `npm run test` (67/67), `npm run build` y `npm run lint` limpios. Push a
+  `fix/delete-mission` y PR #3 actualizada.
 
 ### 2026-06-11 (4) — Cierre de sesión
 - PR #1 (Fase 1) creada y fusionada a master por Hector ✅
