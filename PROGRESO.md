@@ -79,10 +79,17 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Próximo paso
 
-1. **Hector prueba la Fase 2** (`npm run dev` → http://localhost:5173) y reporta qué se
-   siente mal o falta
-2. **Fase 3** según `docs/build/PLAN-VSCODE.md` + saldar deuda de Fase 2:
-   botones de export/import JSON en la UI, y los ajustes que salgan de la prueba de Hector
+1. **Crear y fusionar la PR de la Fase 2** — la rama `claude/phase-1-game-engine-5m9wys`
+   tiene la Fase 2 completa pero AÚN NO está en `master` (la PR no se creó; Hector debe
+   pedir "crea la PR" o crearla él desde GitHub, y darle Merge)
+2. **Hector prueba la app en su compu.** Quedó a medias en la sesión del 2026-06-11:
+   descargó el ZIP (ojo: debe ser el de la RAMA, no el de master, mientras no se fusione
+   la PR), e iba por el paso de `cd` a la carpeta del proyecto en cmd. Pasos completos:
+   carpeta con `package.json` → `npm install` → `npm run dev` → http://localhost:5173
+3. **Alternativa recomendada para evitar la fricción técnica:** configurar GitHub Pages
+   (deploy automático, Hector abriría un link y ya — propuesto, aún sin respuesta)
+4. **Fase 3** según `docs/build/PLAN-VSCODE.md` + deuda de Fase 2 (export/import JSON en
+   la UI, ajustes que salgan de la prueba de Hector)
 
 ## Backlog (post-MVP)
 
@@ -96,6 +103,13 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (4) — Cierre de sesión
+- PR #1 (Fase 1) creada y fusionada a master por Hector ✅
+- Fase 2 terminada y subida a la rama, SIN PR todavía
+- Hector empezó a probar la app localmente: descargó el ZIP y se quedó en el paso de
+  navegar con `cd` hasta la carpeta del proyecto en cmd (Windows). Instrucciones ya dadas
+- Pendiente de decidir: GitHub Pages para probar desde un link sin instalar nada
 
 ### 2026-06-11 (3) — Fase 2: las 7 pantallas
 - UI completa en React + Tailwind: Home, Perfil, Crear personaje, Crear misión,
