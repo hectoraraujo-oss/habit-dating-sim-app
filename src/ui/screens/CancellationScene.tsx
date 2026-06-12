@@ -4,7 +4,7 @@
 import type { Character, Mission } from '../../types';
 import { DIFFICULTY_LABEL } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
-import { Sprite } from '../components/Sprite';
+import { CANCELLATION_SCENE } from '../sprites';
 
 interface CancellationSceneProps {
   character: Character;
@@ -19,8 +19,13 @@ export function CancellationScene({ character, mission, auto, onClose }: Cancell
   const atZero = character.heartsTotal === 0;
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-stone-100 px-4 py-10 text-center">
-      <Sprite character={character} size={112} sad />
+    <div className="flex min-h-svh flex-col items-center bg-stone-100 px-4 py-6 text-center">
+      <img
+        src={CANCELLATION_SCENE}
+        alt="Escena de cancelación"
+        className="max-h-[45svh] w-full max-w-2xl rounded-xl object-cover"
+        style={{ imageRendering: 'pixelated' }}
+      />
 
       <p className="mt-6 max-w-md text-lg text-stone-700">
         {auto

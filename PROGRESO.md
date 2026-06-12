@@ -85,13 +85,27 @@ quedó implementado desde Fase 2: `initGame` en `App.tsx` corre `checkExpiredMis
 `checkAbandonment` al cargar, y la lógica está cubierta por `qa-report.test.ts`. Lo que
 falta para cerrar Fase 3 formalmente:
 
-1. **Verificación manual de Hector**: dejar pasar el deadline de una misión real (cambiando
-   la fecha del sistema o esperando) y confirmar que, al reabrir la app, aparece la escena
-   de cancelación (y la de abandono si pasan 21+ días sin actividad). Si esto se confirma,
-   Fase 3 se marca completa sin trabajo de código adicional.
-2. Si Hector lo aprueba, pasar a **Fase 4 — Pulido** (estética dating-sim, animaciones de
-   corazones) o resolver primero la deuda de Fase 2 (export/import JSON en la UI), a
-   decidir con Hector cuál va primero.
+1. **Verificación manual de Hector (2026-06-11): hecha en parte.** La escena de abandono
+   funciona bien (verificada por Hector con cambio de fecha del sistema). En la de
+   cancelación Hector detectó que la pantalla aparecía sin la ilustración: la spec original
+   de Pantalla 7 pedía solo sprite triste y el código la seguía fielmente, con
+   `escena-cancelacion.png` importada pero sin usar. Decisión de Hector: la escena de
+   cancelación muestra la ilustración como las demás escenas. Fix aplicado en
+   `CancellationScene.tsx` y doc `flujo-pantallas.md` actualizado (repo y vault).
+   **Falta:** que Hector repita la prueba de deadline vencido y confirme que ahora se ve
+   la ilustración. Con eso Fase 3 queda cerrada.
+2. **DECIDIDO por Hector (2026-06-11): la deuda de Fase 2 va primero.** La próxima sesión
+   de código debe exponer el export/import JSON de `storage.ts` en la UI (botones de
+   exportar y de importar con validación, en un lugar discreto tipo ajustes/footer).
+   Después de eso viene **Fase 4 — Pulido**, que Hector elevó a parte del MVP: quiere
+   mecánica y parte visual lo más pulidas posible antes de validar.
+3. **Assets:** Hector va a generar las 5 escenas pixel art él mismo (paquete con prompts
+   en el vault: `assets/PAQUETE-ARTE.md`). Cuando entregue los PNG, integrarlos
+   reemplazando los placeholders (reescalado pixel-perfect a 320x180 si hace falta).
+4. **Después del MVP pulido:** planeación del "road to v1.0" (decisión P3 de Hector,
+   2026-06-11, en DECISIONS del vault).
+5. Limpieza pendiente no urgente: borrar ramas mergeadas `fix/delete-mission` y
+   `claude/phase-1-game-engine-5m9wys` (local y remoto).
 
 ## Backlog (post-MVP)
 
@@ -104,6 +118,19 @@ falta para cerrar Fase 3 formalmente:
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (7) — Verificación de Fase 3 por Hector + fix de ilustración en cancelación
+- Hector verificó manualmente los triggers de tiempo: la escena de abandono funciona bien.
+- Hallazgo de Hector: la escena de cancelación no mostraba la ilustración. Causa: la spec
+  original de Pantalla 7 (`flujo-pantallas.md`) pedía solo sprite con expresión triste;
+  `CANCELLATION_SCENE` estaba importada en `sprites.ts` pero ninguna pantalla la usaba.
+- Fix: `CancellationScene.tsx` ahora muestra `escena-cancelacion.png` en la parte superior
+  (mismo patrón que `AbandonmentScene`), reemplazando al sprite. Doc actualizado en repo
+  y vault con la decisión de Hector (2026-06-11).
+- También se registró en este doc la decisión de prioridad de Hector: export/import en UI
+  primero, después Fase 4 (que ahora es parte del MVP), y que Hector genera las 5 escenas
+  finales con el paquete de arte del vault.
+- 67 tests en verde, `npm run lint` y `npm run build` limpios.
 
 ### 2026-06-11 (6) — Cierre de sesión: PRs #2 y #3 mergeadas + GitHub Pages
 - PR #2 (Fase 2: las 7 pantallas) mergeada a `master`.
