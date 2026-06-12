@@ -14,6 +14,7 @@ interface HomeScreenProps {
   onCreateCharacter: () => void;
   onCreateMission: (characterId: string) => void;
   onOpenMission: (missionId: string) => void;
+  onOpenData: () => void;
 }
 
 export function HomeScreen({
@@ -23,6 +24,7 @@ export function HomeScreen({
   onCreateCharacter,
   onCreateMission,
   onOpenMission,
+  onOpenData,
 }: HomeScreenProps) {
   const active = activeCharacters(state);
   const noCharacters = active.length === 0;
@@ -118,6 +120,13 @@ export function HomeScreen({
               {character.name}
             </button>
           ))}
+          <button
+            onClick={onOpenData}
+            className="ml-auto text-xl opacity-60 transition hover:opacity-100"
+            title="Respaldo de datos"
+          >
+            💾
+          </button>
         </nav>
       </footer>
     </div>

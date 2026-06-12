@@ -1,6 +1,15 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fases 0, 1 y 2 completas + fix delete-character — listo para Fase 3
+## Estado actual: Fases 0-3 completas + respaldo de datos en UI — siguiente: Fase 4 (pulido)
+
+**Fase 3 cerrada el 2026-06-11:** Hector verificó manualmente con cambio de fecha del
+sistema que al reabrir la app aparecen la escena de cancelación (deadline vencido, con su
+ilustración tras PR #4) y la de abandono (21+ días). Sin trabajo de código adicional.
+
+**Respaldo de datos (deuda de Fase 2, decisión P1 de Hector):** pantalla nueva "Respaldo"
+(`DataScreen.tsx`) accesible desde el botón 💾 del footer del Home: exportar descarga
+`habit-dating-sim-respaldo-AAAA-MM-DD.json` y importar valida el archivo y pide
+confirmación antes de reemplazar el estado. Pendiente: prueba manual de Hector.
 
 - [x] Pantalla 1 — Home: 3 slots (ocupado/en riesgo/vacío), barra de corazones, nivel,
       lista de misiones pendientes ordenada por fecha, footer con acceso rápido
@@ -30,7 +39,8 @@ Simplificaciones de Fase 2 (deuda consciente):
 - Sin racha en estadísticas (está en backlog post-MVP)
 - Sin animaciones de corazones flotando ni conteo animado (la secuencia de
   mecanicas-detalle §5 quedó como transiciones instantáneas)
-- Export/import JSON existe en `storage.ts` pero aún no tiene botón en la UI
+- ~~Export/import JSON existe en `storage.ts` pero aún no tiene botón en la UI~~
+  Resuelto el 2026-06-11: pantalla "Respaldo" con botón 💾 en el footer del Home
 - El sprite se asigna por hash del id (no hay selector de sprite)
 
 ## Estado anterior: Fase 1 — Motor del juego ✅ completada
@@ -79,33 +89,17 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Próximo paso
 
-**Fase 3 — Triggers de tiempo** (`docs/build/PLAN-VSCODE.md` §6): el criterio de salida
-("al abrir la app se evalúan deadlines vencidos y abandonos, encolados como escenas") ya
-quedó implementado desde Fase 2: `initGame` en `App.tsx` corre `checkExpiredMissions` y
-`checkAbandonment` al cargar, y la lógica está cubierta por `qa-report.test.ts`. Lo que
-falta para cerrar Fase 3 formalmente:
-
-1. **Verificación manual de Hector (2026-06-11): hecha en parte.** La escena de abandono
-   funciona bien (verificada por Hector con cambio de fecha del sistema). En la de
-   cancelación Hector detectó que la pantalla aparecía sin la ilustración: la spec original
-   de Pantalla 7 pedía solo sprite triste y el código la seguía fielmente, con
-   `escena-cancelacion.png` importada pero sin usar. Decisión de Hector: la escena de
-   cancelación muestra la ilustración como las demás escenas. Fix aplicado en
-   `CancellationScene.tsx` y doc `flujo-pantallas.md` actualizado (repo y vault).
-   **Falta:** que Hector repita la prueba de deadline vencido y confirme que ahora se ve
-   la ilustración. Con eso Fase 3 queda cerrada.
-2. **DECIDIDO por Hector (2026-06-11): la deuda de Fase 2 va primero.** La próxima sesión
-   de código debe exponer el export/import JSON de `storage.ts` en la UI (botones de
-   exportar y de importar con validación, en un lugar discreto tipo ajustes/footer).
-   Después de eso viene **Fase 4 — Pulido**, que Hector elevó a parte del MVP: quiere
-   mecánica y parte visual lo más pulidas posible antes de validar.
+1. **Prueba manual de Hector del respaldo:** abrir la app publicada, tocar 💾 en el footer
+   del Home, descargar el respaldo, y probar importarlo de vuelta (debe pedir
+   confirmación antes de reemplazar). Con eso la deuda de Fase 2 queda cerrada de verdad.
+2. **Fase 4 — Pulido** (parte del MVP por decisión P3 de Hector): estética dating-sim,
+   animaciones de corazones (secuencia de mecanicas-detalle §5), responsive, y el resto
+   de la deuda visual de Fase 2 (historial por semana si Hector lo quiere).
 3. **Assets:** Hector va a generar las 5 escenas pixel art él mismo (paquete con prompts
-   en el vault: `assets/PAQUETE-ARTE.md`). Cuando entregue los PNG, integrarlos
-   reemplazando los placeholders (reescalado pixel-perfect a 320x180 si hace falta).
+   en el vault: `assets/PAQUETE-ARTE.md`, entregables en `assets/finales/`). Cuando
+   entregue los PNG, integrarlos reemplazando los placeholders.
 4. **Después del MVP pulido:** planeación del "road to v1.0" (decisión P3 de Hector,
    2026-06-11, en DECISIONS del vault).
-5. Limpieza pendiente no urgente: borrar ramas mergeadas `fix/delete-mission` y
-   `claude/phase-1-game-engine-5m9wys` (local y remoto).
 
 ## Backlog (post-MVP)
 
@@ -118,6 +112,20 @@ falta para cerrar Fase 3 formalmente:
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-11 (8) — Fase 3 cerrada + respaldo de datos en la UI
+- Hector confirmó que la escena de cancelación ya se ve con su ilustración: **Fase 3
+  completada** (abandono y cancelación verificados con paso de tiempo real).
+- Respaldo de datos (deuda de Fase 2): nueva `DataScreen.tsx` ("Respaldo") con exportar
+  (descarga JSON con fecha en el nombre) e importar (valida con `importStateJson`,
+  distingue JSON inválido de schema incorrecto, y pide confirmación con el conteo de lo
+  que se va a cargar antes de reemplazar el estado).
+- Acceso: botón 💾 discreto en el footer del Home (`onOpenData`), pantalla nueva en el
+  router de `App.tsx` (`handleImportState` reemplaza el estado completo y muestra toast).
+- Limpieza de ramas mergeadas hecha: el repo queda solo con `master`.
+- `.claude/launch.json` agregado para verificación visual con el preview de Claude Code.
+- Verificado en navegador real: Home con botón 💾, pantalla Respaldo renderiza, volver
+  funciona, sin errores de consola. 67 tests, lint y build limpios.
 
 ### 2026-06-11 (7) — Verificación de Fase 3 por Hector + fix de ilustración en cancelación
 - Hector verificó manualmente los triggers de tiempo: la escena de abandono funciona bien.
