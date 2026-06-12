@@ -564,7 +564,7 @@ Consecuencia emocional de cancelar una misión (cambiar su fecha límite o elimi
 ### Elementos en pantalla
 
 **Pantalla semi-inmersiva (no full-screen como abandono):**
-- Sprite del personaje con expresión de decepción/resignación (no enojo)
+- Ilustración de la escena de cancelación (pixel art) en la parte superior, como en las demás escenas. (Decisión de Hector 2026-06-11: reemplaza al sprite con expresión de decepción que pedía la versión original de este doc.)
 - Texto narrativo breve (2 líneas) en segunda persona
   - Ej. "Okay. Lo entiendo. Pero ya sabes lo que cuesta esto."
 - Misión cancelada: nombre + dificultad (para que el usuario vea qué canceló)
