@@ -26,6 +26,7 @@ import { CompleteMissionScreen } from './ui/screens/CompleteMissionScreen';
 import { LevelScene } from './ui/screens/LevelScene';
 import { AbandonmentScene } from './ui/screens/AbandonmentScene';
 import { CancellationScene } from './ui/screens/CancellationScene';
+import { DataScreen } from './ui/screens/DataScreen';
 
 type Screen =
   | { name: 'home' }
@@ -34,7 +35,8 @@ type Screen =
   | { name: 'create-mission'; characterId: string; from: Screen }
   | { name: 'complete-mission'; missionId: string; from: Screen }
   | { name: 'level-scene'; characterId: string; newLevel: Level; wedding: boolean }
-  | { name: 'cancellation-scene'; characterId: string; missionId: string; auto: boolean };
+  | { name: 'cancellation-scene'; characterId: string; missionId: string; auto: boolean }
+  | { name: 'data' };
 
 // Escenas detectadas al abrir la app, mostradas en secuencia antes del Home
 type StartupScene =
@@ -164,6 +166,12 @@ export default function App() {
     setScreen({ name: 'cancellation-scene', characterId: mission.characterId, missionId, auto: false });
   }
 
+  function handleImportState(imported: GameState) {
+    setState(imported);
+    setScreen({ name: 'home' });
+    setToast('Respaldo importado 💾');
+  }
+
   function closeCancellationScene(characterId: string) {
     setState(acknowledgeCancellationScene(state, characterId));
     setScreen({ name: 'home' });
@@ -222,6 +230,7 @@ export default function App() {
             onOpenMission={(missionId) =>
               setScreen({ name: 'complete-mission', missionId, from: { name: 'home' } })
             }
+            onOpenData={() => setScreen({ name: 'data' })}
           />
           {toast && <Toast message={toast} />}
         </>
@@ -307,6 +316,16 @@ export default function App() {
         />
       );
     }
+
+    case 'data':
+      return (
+        <DataScreen
+          state={state}
+          today={today}
+          onImport={handleImportState}
+          onBack={() => setScreen({ name: 'home' })}
+        />
+      );
 
     case 'cancellation-scene': {
       const character = findCharacter(screen.characterId);
