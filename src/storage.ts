@@ -2,7 +2,7 @@
 // más export/import como texto JSON para respaldo manual.
 // El parámetro `storage` es inyectable para poder testear sin navegador.
 
-import type { GameState } from './types';
+import type { Character, GameState, HappyEnding, Mission } from './types';
 import { SCHEMA_VERSION } from './game/constants';
 
 export const STORAGE_KEY = 'habit-dating-sim:state';
@@ -22,14 +22,96 @@ export function createEmptyState(): GameState {
   };
 }
 
+// --- Validación profunda (QA C1) ---
+// Un respaldo con campos internos corruptos (fecha no parseable, número como string,
+// status inventado…) pasaba la validación, se persistía, y brickeaba la app en la
+// siguiente apertura (RangeError en los checks de initGame). Aquí se valida la forma
+// y el tipo de cada character/mission/happyEnding antes de aceptar el estado.
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Fecha ISO YYYY-MM-DD real: formato correcto Y existente en el calendario
+// (rechaza "ayer", "15/06/2026" y también "2026-02-31").
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !ISO_DATE_RE.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+const CHARACTER_STATUSES: readonly string[] = ['active', 'happy_ending', 'abandoned'];
+const MISSION_STATUSES: readonly string[] = ['pending', 'completed', 'failed', 'cancelled'];
+const DIFFICULTIES: readonly string[] = ['easy', 'medium', 'hard'];
+const LEVELS: readonly number[] = [0, 1, 2, 3];
+const SLOT_NUMBERS: readonly number[] = [1, 2, 3];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isValidCharacter(value: unknown): value is Character {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    (value.slotNumber === null ||
+      (isFiniteNumber(value.slotNumber) && SLOT_NUMBERS.includes(value.slotNumber))) &&
+    typeof value.status === 'string' &&
+    CHARACTER_STATUSES.includes(value.status) &&
+    isFiniteNumber(value.level) &&
+    LEVELS.includes(value.level) &&
+    isFiniteNumber(value.heartsTotal) &&
+    isIsoDate(value.createdDate) &&
+    (value.lastMissionCompletedDate === null || isIsoDate(value.lastMissionCompletedDate)) &&
+    isIsoDate(value.inactivitySince) &&
+    typeof value.pendingAbandonmentScene === 'boolean' &&
+    typeof value.pendingCancellationScene === 'boolean'
+  );
+}
+
+function isValidMission(value: unknown): value is Mission {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.characterId === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.difficulty === 'string' &&
+    DIFFICULTIES.includes(value.difficulty) &&
+    isIsoDate(value.deadline) &&
+    typeof value.status === 'string' &&
+    MISSION_STATUSES.includes(value.status) &&
+    (value.completedDate === null || isIsoDate(value.completedDate)) &&
+    (value.heartsAwarded === null || isFiniteNumber(value.heartsAwarded))
+  );
+}
+
+function isValidHappyEnding(value: unknown): value is HappyEnding {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.characterName === 'string' &&
+    typeof value.originalCharacterId === 'string' &&
+    isIsoDate(value.weddingDate)
+  );
+}
+
 function isValidState(value: unknown): value is GameState {
-  if (typeof value !== 'object' || value === null) return false;
+  if (!isRecord(value)) return false;
   const state = value as Partial<GameState>;
   return (
     state.schemaVersion === SCHEMA_VERSION &&
     Array.isArray(state.characters) &&
+    state.characters.every(isValidCharacter) &&
     Array.isArray(state.missions) &&
-    Array.isArray(state.happyEndings)
+    state.missions.every(isValidMission) &&
+    Array.isArray(state.happyEndings) &&
+    state.happyEndings.every(isValidHappyEnding)
   );
 }
 

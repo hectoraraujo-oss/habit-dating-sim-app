@@ -36,7 +36,38 @@ function sampleState(): GameState {
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
   });
+  state.missions.push({
+    id: 'mission-1',
+    characterId: 'char-1',
+    name: 'Ir al gym',
+    difficulty: 'medium',
+    deadline: '2026-06-15',
+    status: 'pending',
+    completedDate: null,
+    heartsAwarded: null,
+  });
+  state.happyEndings.push({
+    id: 'he-1',
+    characterName: 'Lectura',
+    originalCharacterId: 'char-0',
+    weddingDate: '2026-04-20',
+  });
   return state;
+}
+
+// Respaldo corrupto representativo: parte del estado válido y rompe un campo interno.
+function corruptState(patch: {
+  character?: Record<string, unknown>;
+  mission?: Record<string, unknown>;
+  dropCharacterField?: string;
+  dropMissionField?: string;
+}): string {
+  const state = sampleState();
+  const character: Record<string, unknown> = { ...state.characters[0], ...patch.character };
+  const mission: Record<string, unknown> = { ...state.missions[0], ...patch.mission };
+  if (patch.dropCharacterField) delete character[patch.dropCharacterField];
+  if (patch.dropMissionField) delete mission[patch.dropMissionField];
+  return JSON.stringify({ ...state, characters: [character], missions: [mission] });
 }
 
 describe('saveState / loadState', () => {
@@ -89,5 +120,123 @@ describe('exportStateJson / importStateJson', () => {
     expect(
       importStateJson(JSON.stringify({ ...createEmptyState(), schemaVersion: 99 })),
     ).toEqual({ ok: false, error: 'invalid_schema' });
+  });
+});
+
+// QA C1: un respaldo con campos internos corruptos no debe pasar la validación.
+// Antes, isValidState solo revisaba schemaVersion + que los 3 campos fueran arrays:
+// un character con inactivitySince no parseable se persistía y brickeaba la app
+// en la siguiente apertura (RangeError dentro de initGame).
+describe('importStateJson — respaldos corruptos (QA C1)', () => {
+  it('acepta un respaldo completo y válido (character + mission + happyEnding)', () => {
+    const state = sampleState();
+    expect(importStateJson(exportStateJson(state))).toEqual({ ok: true, state });
+  });
+
+  it('rechaza un character con fecha no parseable (inactivitySince: "ayer")', () => {
+    expect(importStateJson(corruptState({ character: { inactivitySince: 'ayer' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un character sin heartsTotal', () => {
+    expect(importStateJson(corruptState({ dropCharacterField: 'heartsTotal' }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un character con heartsTotal de tipo incorrecto (string)', () => {
+    expect(importStateJson(corruptState({ character: { heartsTotal: '20' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un character con status inventado', () => {
+    expect(importStateJson(corruptState({ character: { status: 'zombie' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un character con level fuera de rango', () => {
+    expect(importStateJson(corruptState({ character: { level: 7 } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un character con slotNumber inválido (debe ser 1-3 o null)', () => {
+    expect(importStateJson(corruptState({ character: { slotNumber: 9 } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un character con flag de escena no booleano', () => {
+    expect(
+      importStateJson(corruptState({ character: { pendingCancellationScene: 'true' } })),
+    ).toEqual({ ok: false, error: 'invalid_schema' });
+  });
+
+  it('rechaza characters: [null]', () => {
+    const state = sampleState();
+    expect(importStateJson(JSON.stringify({ ...state, characters: [null] }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza una mission sin deadline', () => {
+    expect(importStateJson(corruptState({ dropMissionField: 'deadline' }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza una mission con deadline no ISO', () => {
+    expect(importStateJson(corruptState({ mission: { deadline: '15/06/2026' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza una mission con difficulty inventada', () => {
+    expect(importStateJson(corruptState({ mission: { difficulty: 'imposible' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza una mission con status inventado', () => {
+    expect(importStateJson(corruptState({ mission: { status: 'paused' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza una fecha con formato ISO pero imposible (2026-02-31)', () => {
+    expect(importStateJson(corruptState({ character: { createdDate: '2026-02-31' } }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un happyEnding sin weddingDate', () => {
+    const state = sampleState();
+    const broken = { ...state.happyEndings[0] } as Record<string, unknown>;
+    delete broken.weddingDate;
+    expect(importStateJson(JSON.stringify({ ...state, happyEndings: [broken] }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('loadState cae a estado vacío si lo guardado tiene un character corrupto', () => {
+    const storage = memoryStorage();
+    storage.setItem(STORAGE_KEY, corruptState({ character: { inactivitySince: 'ayer' } }));
+    expect(loadState(storage)).toEqual(createEmptyState());
   });
 });

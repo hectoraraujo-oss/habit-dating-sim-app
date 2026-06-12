@@ -1,6 +1,13 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fases 0-3 completas + respaldo de datos en UI — siguiente: Fase 4 (pulido)
+## Estado actual: Fases 0-3 completas + fixes de auditoría QA (C1, M1) — siguiente: Fase 4 (pulido)
+
+**Fixes de auditoría QA (2026-06-12, rama `fix/qa-c1-m1-import-validation-pending-scenes`):**
+los dos bloqueantes del reporte del QA Auditor quedaron corregidos: C1 (importar un
+respaldo corrupto ya no puede brickear la app: validación profunda en `storage.ts`) y
+M1 (las escenas de abandono/cancelación que quedaron sin reconocer al cerrar la app
+vuelven a aparecer en la siguiente apertura: `buildStartup` en `src/game/startup.ts`).
+93 tests en verde. Pendiente: revisión y merge de la PR por el Director.
 
 **Fase 3 cerrada el 2026-06-11:** Hector verificó manualmente con cambio de fecha del
 sistema que al reabrir la app aparecen la escena de cancelación (deadline vencido, con su
@@ -112,6 +119,27 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-12 — Fixes de auditoría QA (C1, M1)
+- Reporte del QA Auditor (auditoria-qa.md en el vault): 1 crítico, 2 mayores. Se
+  corrigieron los dos marcados como bloqueantes antes de Fase 4.
+- **C1 (crítico):** `isValidState` solo validaba schemaVersion y que los 3 campos fueran
+  arrays; un respaldo con campos internos corruptos (fecha "ayer", heartsTotal string,
+  status inventado) se importaba, se persistía, y brickeaba la app en la siguiente
+  apertura (RangeError en los checks). Fix: validación profunda campo por campo de cada
+  character/mission/happyEnding en `storage.ts` (tipos, enums, fechas ISO reales:
+  rechaza también "2026-02-31"). `importStateJson` ahora devuelve `invalid_schema` para
+  esos archivos y `loadState` cae a estado vacío en vez de explotar.
+- **M1 (mayor):** los flags `pendingAbandonmentScene`/`pendingCancellationScene` eran
+  write-only: si la app se cerraba durante una escena (o se importaba un respaldo con
+  flags en true), la consecuencia narrativa se perdía para siempre. Fix: la construcción
+  de escenas de apertura se extrajo de `App.tsx` a una función pura `buildStartup`
+  (`src/game/startup.ts`) que además re-hidrata los flags que siguen en true sin
+  duplicar las escenas de los checks de hoy. Para cancelaciones re-hidratadas usa la
+  misión failed/cancelled más reciente del personaje como referencia; si no existe
+  ninguna, limpia el flag sin escena (sin crash).
+- 26 tests nuevos (16 de respaldos corruptos en `storage.test.ts`, 10 de `buildStartup`
+  en `src/game/startup.test.ts`): **93 tests en verde**, lint y build limpios.
 
 ### 2026-06-11 (8) — Fase 3 cerrada + respaldo de datos en la UI
 - Hector confirmó que la escena de cancelación ya se ve con su ilustración: **Fase 3

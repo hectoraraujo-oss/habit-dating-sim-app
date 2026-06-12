@@ -1,7 +1,8 @@
 // Raíz de la app: estado del juego + navegación entre las 7 pantallas.
 // Al abrir corre los checks de vencimiento y abandono (equivalente al "page load
-// del Home" de bubble-decisions) y encola las escenas pendientes. Cada cambio de
-// estado se persiste en localStorage.
+// del Home" de bubble-decisions) y encola las escenas pendientes — incluidas las
+// que quedaron sin reconocer de sesiones anteriores (buildStartup, QA M1).
+// Cada cambio de estado se persiste en localStorage.
 
 import { useEffect, useState } from 'react';
 import type { Difficulty, GameState, Level } from './types';
@@ -10,13 +11,12 @@ import {
   acknowledgeAbandonmentScene,
   acknowledgeCancellationScene,
   cancelMission,
-  checkAbandonment,
-  checkExpiredMissions,
   completeMission,
   createCharacter,
   createMission,
   deleteCharacter,
 } from './game/engine';
+import { buildStartup, type StartupScene } from './game/startup';
 import { loadState, saveState } from './storage';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
@@ -38,32 +38,11 @@ type Screen =
   | { name: 'cancellation-scene'; characterId: string; missionId: string; auto: boolean }
   | { name: 'data' };
 
-// Escenas detectadas al abrir la app, mostradas en secuencia antes del Home
-type StartupScene =
-  | { kind: 'abandonment'; characterId: string }
-  | { kind: 'cancellation'; characterId: string; missionId: string };
-
-interface InitResult {
-  state: GameState;
-  startupScenes: StartupScene[];
-}
-
-function initGame(today: string): InitResult {
-  const expired = checkExpiredMissions(loadState(), today);
-  const abandonment = checkAbandonment(expired.state, today);
-  const startupScenes: StartupScene[] = [
-    ...abandonment.events.map((event) => ({ kind: 'abandonment' as const, characterId: event.characterId })),
-    ...expired.expiredMissionIds.map((missionId) => {
-      const mission = abandonment.state.missions.find((m) => m.id === missionId);
-      return { kind: 'cancellation' as const, characterId: mission?.characterId ?? '', missionId };
-    }),
-  ];
-  return { state: abandonment.state, startupScenes };
-}
-
 export default function App() {
   const today = todayIso();
-  const [init] = useState(() => initGame(today));
+  // Escenas de apertura (checks de hoy + flags pendientes de sesiones anteriores),
+  // mostradas en secuencia antes del Home. Lógica pura en src/game/startup.ts.
+  const [init] = useState(() => buildStartup(loadState(), today));
   const [state, setState] = useState<GameState>(init.state);
   const [startupScenes, setStartupScenes] = useState<StartupScene[]>(init.startupScenes);
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
