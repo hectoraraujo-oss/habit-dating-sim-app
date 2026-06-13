@@ -230,7 +230,10 @@ Formulario para definir una nueva misión para un personaje específico. Simple 
 
 3. **Fecha límite** (date picker)
    - Default: 3 días desde hoy
-   - Rango permitido: mañana hasta 14 días desde hoy (no mismo día, no más de 2 semanas)
+   - Rango permitido: HOY hasta 14 días desde hoy (no más de 2 semanas)
+   - > **Decisión P5 de Hector (2026-06-12):** el mínimo pasó de mañana a hoy. El modelo
+     > mental del hábito es "hoy hago X". Ojo: las fechas se comparan por día, así que una
+     > misión con deadline hoy se considera vencida a partir de mañana.
    - Mostrar: día de la semana + fecha (ej. "Jueves 4 junio")
 
 **Preview de recompensa (debajo del formulario, se actualiza en tiempo real):**
@@ -390,6 +393,10 @@ Personaje:
 - Copy de contexto: "Llegó tarde, pero vale la pena cumplir. Ganarás menos corazones."
 - La recompensa se reduce (ver mecanicas-detalle.md para el multiplicador exacto)
 - El botón sigue funcionando — el usuario puede completar misiones tardías con penalización
+- > **Decisión P4 de Hector (2026-06-12) — derecho de réplica:** esta variante ofrece DOS
+  > opciones: "Sí lo hice (tarde)" (completa con la recompensa reducida, con preview del
+  > monto) y "Aceptar la pérdida" (failed + penalización + escena de cancelación). La misión
+  > vencida ya no se auto-falla al abrir la app — ver nota en mecanicas-detalle.md §4.
 
 **Solo para el Agente de Bubble:** La acción "cancelar misión" en esta pantalla debe registrar el evento de cancelación y redirigir a Pantalla 7 (Escena de cancelación), no simplemente borrar la misión.
 

@@ -1,6 +1,17 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fases 0-3 completas + fixes de auditoría QA (C1, M1) — siguiente: Fase 4 (pulido)
+## Estado actual: Fases 0-3 completas + fixes QA (C1, M1) + decisiones P4/P5 implementadas — siguiente: Fase 4 (pulido)
+
+**Decisiones P4 y P5 de Hector (2026-06-12, registradas en DECISIONS.md del vault) implementadas:**
+P4 (derecho de réplica): una misión vencida ya no se auto-falla al abrir la app; queda
+pendiente como "vencida" hasta que el usuario elija en la Pantalla 4 entre "Sí lo hice
+(tarde)" (recompensa reducida por el multiplicador de retraso de mecanicas-detalle §4) o
+"Aceptar la pérdida" (failed + penalización + escena, el flujo anterior). **Las vencidas
+pendientes SIGUEN contando para el tope de 3 misiones por personaje: la deuda ocupa
+espacio** (decisión de diseño documentada también en mecanicas-detalle §4). P5: el deadline
+mínimo de una misión es HOY (antes mañana); ojo, las fechas se comparan por día, así que
+una misión con deadline hoy vence mañana al abrir. 108 tests en verde. Pendiente: commit/PR
+del Director.
 
 **Fixes de auditoría QA (2026-06-12, rama `fix/qa-c1-m1-import-validation-pending-scenes`):**
 los dos bloqueantes del reporte del QA Auditor quedaron corregidos: C1 (importar un
@@ -23,9 +34,11 @@ confirmación antes de reemplazar el estado. Pendiente: prueba manual de Hector.
 - [x] Pantalla 2 — Perfil: sprite, nivel con etapa, barra, estadísticas (completadas,
       corazones, canceladas), historial con pendientes al tope, botón crear misión
 - [x] Pantalla 3 — Crear misión: 3 campos, selector visual de dificultad, preview de
-      recompensa, deadline de mañana a 14 días (default +3), bloqueo con 3 pendientes
+      recompensa, deadline de HOY a 14 días (default +3, mínimo hoy por decisión P5),
+      bloqueo con 3 pendientes
 - [x] Pantalla 4 — Marcar completa: botón grande "✓ Lo hice", preview +X 💕, link de
-      cancelar con su costo; variante de misión vencida ("Aceptar la pérdida")
+      cancelar con su costo; variante de misión vencida con dos opciones (P4): "Sí lo
+      hice (tarde)" con preview de recompensa reducida, y "Aceptar la pérdida"
 - [x] Pantalla 5 — Escena de nivel (con placeholder de imagen) + variante de BODA
 - [x] Pantalla 6 — Escena de abandono (variantes: se fue / bajó de nivel)
 - [x] Pantalla 7 — Escena de cancelación (manual y automática; aviso si corazones = 0)
@@ -83,9 +96,12 @@ Simplificaciones de Fase 2 (deuda consciente):
 
 Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector):
 
-3. **Misión vencida no se puede completar** (TC-024/TC-040): pasa a `failed` con penalización.
+3. ~~**Misión vencida no se puede completar** (TC-024/TC-040): pasa a `failed` con penalización.
    El multiplicador por retraso de `mecanicas-detalle.md` §4 quedó implementado como función
-   pura (`hearts.ts`) por fidelidad al doc, pero en el flujo actual nunca aplica.
+   pura (`hearts.ts`) por fidelidad al doc, pero en el flujo actual nunca aplica.~~
+   **Superseded el 2026-06-12 por la decisión P4 de Hector (derecho de réplica):** la vencida
+   queda pendiente y el usuario elige entre completarla tarde (el multiplicador de `hearts.ts`
+   por fin aplica en el flujo real) o aceptar la pérdida (el flujo anterior, ahora manual).
 4. **Campos extra vs. el modelo original:** `createdDate` (inactividad si nunca se completó
    misión), `inactivitySince` (ancla del reloj de abandono) y `slotNumber` nullable (slot
    liberado). CLAUDE.md actualizado.
@@ -119,6 +135,33 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-12 — P4 derecho de réplica + P5 deadline hoy
+- Implementadas las decisiones P4 y P5 de Hector (DECISIONS.md del vault, 2026-06-12).
+- **P5 (deadline hoy):** `createMission` ahora recibe `today` y valida que el deadline no
+  sea anterior a hoy (`deadline_in_past`); el date picker de `CreateMissionScreen` tiene
+  `min = hoy`. `rescheduleMission` valida la fecha nueva ANTES de cancelar para no penalizar
+  un cambio que no va a suceder. Nota: antes el motor no validaba el deadline (solo la UI);
+  ahora la regla vive en ambos lados.
+- **P4 (derecho de réplica):** `checkExpiredMissions` se eliminó del motor (era el auto-fallo
+  al abrir); `buildStartup` ya solo corre el check de abandono + re-hidratación de flags.
+  `completeMission` acepta misiones vencidas y aplica el multiplicador por retraso
+  (`calcHeartsEarned`, hasta hoy sin uso real). Acción nueva `acceptMissionLoss` = el flujo
+  anterior (failed + penalización + escena de cancelación), ahora como decisión del usuario.
+  `CompleteMissionScreen` muestra las dos opciones con preview de la recompensa reducida.
+  `checkAbandonment` no cambió: el reloj de abandono sigue corriendo igual.
+- **Tope de 3 pendientes:** las vencidas SIGUEN contando para el tope (la deuda ocupa
+  espacio). Resolver la vencida (completar tarde o aceptar la pérdida) libera el cupo.
+- Decisiones de implementación donde el doc no especificaba: sin ventana límite para
+  completar tarde (piso 25% para siempre, hasta que el abandono se lleve al personaje);
+  `acceptMissionLoss` solo exige que la misión esté pendiente (la UI es la que la ofrece
+  únicamente para vencidas); el máximo de 14 días sigue siendo validación solo de UI.
+- Docs actualizados con notas de decisión: `mecanicas-detalle.md` §4 (repo y vault),
+  `flujo-pantallas.md` (rango del deadline y Pantalla 4, repo y vault), `qa-report.md`
+  (nota de obsolescencia de TC-016/TC-024/TC-025/TC-040, mismo precedente que heartsTotal).
+- Tests adaptados (TC-016/024/025/040 al contrato nuevo) + 15 nuevos (multiplicador con
+  1/3/5/30 días de retraso, aceptar pérdida, tope con vencidas, buildStartup sin auto-fallo,
+  deadline hoy/ayer): **108 tests en verde**, lint y build limpios.
 
 ### 2026-06-12 — Fixes de auditoría QA (C1, M1)
 - Reporte del QA Auditor (auditoria-qa.md en el vault): 1 crítico, 2 mayores. Se

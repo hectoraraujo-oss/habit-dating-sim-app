@@ -56,16 +56,19 @@ describe('buildStartup — checks de esta apertura (comportamiento existente)', 
     expect(result.startupScenes).toEqual([]);
   });
 
-  it('una misión vencida encola su escena de cancelación', () => {
+  // Actualizado por decisión P4 (2026-06-12): derecho de réplica — las vencidas ya no se
+  // auto-fallan al abrir; quedan pendientes hasta que el usuario decida en la Pantalla 4.
+  it('una misión vencida ya NO se auto-falla ni encola escena al abrir', () => {
     const state = makeState(
       [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ deadline: addDays(TODAY, -1) })],
     );
     const result = buildStartup(state, TODAY);
-    expect(result.startupScenes).toEqual([
-      { kind: 'cancellation', characterId: 'char-1', missionId: 'mission-1' },
-    ]);
-    expect(result.state.missions[0].status).toBe('failed');
+    expect(result.startupScenes).toEqual([]);
+    expect(result.state.missions[0].status).toBe('pending');
+    // Sin penalización ni escena agendada: la deuda sigue siendo del usuario
+    expect(result.state.characters[0].heartsTotal).toBe(10);
+    expect(result.state.characters[0].pendingCancellationScene).toBe(false);
   });
 
   it('21 días de inactividad encolan la escena de abandono', () => {
@@ -74,6 +77,19 @@ describe('buildStartup — checks de esta apertura (comportamiento existente)', 
     ]);
     const result = buildStartup(state, TODAY);
     expect(result.startupScenes).toEqual([{ kind: 'abandonment', characterId: 'char-1' }]);
+  });
+
+  // P4 + checkAbandonment sin cambios: el reloj de abandono sigue corriendo aunque haya
+  // una vencida pendiente sin resolver.
+  it('una vencida pendiente no detiene el reloj de abandono', () => {
+    const state = makeState(
+      [makeCharacter({ level: 1, lastMissionCompletedDate: addDays(TODAY, -21) })],
+      [makeMission({ deadline: addDays(TODAY, -5) })],
+    );
+    const result = buildStartup(state, TODAY);
+    expect(result.startupScenes).toEqual([{ kind: 'abandonment', characterId: 'char-1' }]);
+    expect(result.state.characters[0].level).toBe(0);
+    expect(result.state.missions[0].status).toBe('pending');
   });
 });
 
@@ -120,18 +136,22 @@ describe('buildStartup — re-hidratación de flags pendientes (QA M1)', () => {
     expect(result.state.characters[0].pendingCancellationScene).toBe(false);
   });
 
-  it('no duplica la escena si el check de hoy ya la encoló', () => {
-    // El check de hoy detecta la misión vencida (encola escena y deja el flag en true);
-    // la re-hidratación no debe encolar una segunda escena para el mismo personaje.
+  // Actualizado por decisión P4 (2026-06-12): derecho de réplica — el check de hoy ya no
+  // genera escenas de cancelación (las vencidas no se auto-fallan), pero los flags
+  // pendientes de sesiones anteriores se siguen re-hidratando sin tocar la vencida.
+  it('re-hidrata el flag de cancelación sin auto-fallar la vencida pendiente', () => {
     const state = makeState(
-      [makeCharacter({ heartsTotal: 10 })],
-      [makeMission({ deadline: addDays(TODAY, -1) })],
+      [makeCharacter({ heartsTotal: 10, pendingCancellationScene: true })],
+      [
+        makeMission({ id: 'm0', status: 'failed', heartsAwarded: -3 }),
+        makeMission({ id: 'm1', deadline: addDays(TODAY, -1) }),
+      ],
     );
     const result = buildStartup(state, TODAY);
-    expect(result.state.characters[0].pendingCancellationScene).toBe(true);
     expect(result.startupScenes).toEqual([
-      { kind: 'cancellation', characterId: 'char-1', missionId: 'mission-1' },
+      { kind: 'cancellation', characterId: 'char-1', missionId: 'm0' },
     ]);
+    expect(result.state.missions.find((m) => m.id === 'm1')?.status).toBe('pending');
   });
 
   it('no duplica la escena de abandono cuando el check de hoy ya la generó', () => {

@@ -5,16 +5,23 @@
 // heartsTotal es el único contador y baja con penalizaciones (mínimo 0); el nivel
 // no baja por penalizaciones, solo por abandono. Los TCs que hablaban de
 // hearts_current se leen ahora sobre heartsTotal.
+//
+// Decisión P4 de Hector (2026-06-12) — derecho de réplica: una misión vencida ya no se
+// bloquea ni se auto-falla. El usuario elige: completarla tarde (recompensa reducida por
+// el multiplicador de mecanicas-detalle §4) o aceptar la pérdida (failed + penalización +
+// escena). TC-016, TC-024, TC-025 y TC-040 se actualizaron a ese contrato.
+// Decisión P5 (2026-06-12): el deadline mínimo de una misión es HOY (antes mañana);
+// createMission ahora recibe `today` y valida.
 
 import { describe, expect, it } from 'vitest';
 import type { Character, GameState, Mission } from '../types';
 import { SCHEMA_VERSION } from './constants';
 import { addDays } from './dates';
 import {
+  acceptMissionLoss,
   activeCharacters,
   cancelMission,
   checkAbandonment,
-  checkExpiredMissions,
   completeMission,
   createCharacter,
   createMission,
@@ -229,20 +236,22 @@ describe('Área 3: Escenas', () => {
     expect(getMission(result.state, 'mission-1').status).toBe('cancelled');
   });
 
-  it('TC-016: escena de cancelación automática al vencer la fecha límite', () => {
+  // Actualizado por decisión P4 (2026-06-12): derecho de réplica — el vencimiento ya no
+  // dispara la escena automáticamente al abrir; la escena llega cuando el usuario acepta
+  // la pérdida en la Pantalla 4.
+  it('TC-016: escena de cancelación al aceptar la pérdida de una misión vencida', () => {
     const state = makeState(
       [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -1) })],
     );
-    const checked = checkExpiredMissions(state, TODAY);
-    expect(checked.expiredMissionIds).toEqual(['mission-1']);
-    expect(getMission(checked.state, 'mission-1').status).toBe('failed');
-    const character = getCharacter(checked.state, 'char-1');
+    const result = acceptMissionLoss(state, 'mission-1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.penalty).toBe(3);
+    expect(getMission(result.state, 'mission-1').status).toBe('failed');
+    const character = getCharacter(result.state, 'char-1');
     expect(character.pendingCancellationScene).toBe(true);
     expect(character.heartsTotal).toBe(7);
-    // Tampoco se puede marcar como completada una misión ya vencida
-    const attempt = completeMission(state, 'mission-1', TODAY);
-    expect(attempt.kind).toBe('expired');
   });
 
   it('TC-017: escena de abandono exactamente a los 21 días sin actividad', () => {
@@ -361,7 +370,7 @@ describe('Área 5: Cancelación', () => {
   it('TC-023: cambiar la fecha límite = cancelación automática + misión nueva', () => {
     const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission({ difficulty: 'easy' })]);
     const newDeadline = addDays(TODAY, 10);
-    const result = rescheduleMission(state, 'mission-1', newDeadline);
+    const result = rescheduleMission(state, 'mission-1', newDeadline, TODAY);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(getMission(result.state, 'mission-1').status).toBe('cancelled');
@@ -373,26 +382,32 @@ describe('Área 5: Cancelación', () => {
     expect(result.newMission.difficulty).toBe('easy');
   });
 
-  it('TC-024: misión vencida no puede marcarse como completada', () => {
+  // Actualizado por decisión P4 (2026-06-12): derecho de réplica — una misión vencida
+  // SÍ puede marcarse como completada, con la recompensa reducida (2 días tarde → 75%).
+  it('TC-024: misión vencida sí puede completarse tarde con recompensa reducida', () => {
     const state = makeState(
       [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -2) })],
     );
-    const result = completeMission(state, 'mission-1', TODAY);
-    expect(result.kind).toBe('expired');
-    if (result.kind !== 'expired') return;
-    expect(getMission(result.state, 'mission-1').status).toBe('failed');
+    const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(4); // ceil(5 × 0.75)
+    expect(getMission(result.state, 'mission-1').status).toBe('completed');
     const character = getCharacter(result.state, 'char-1');
-    expect(character.heartsTotal).toBe(7);
-    expect(character.pendingCancellationScene).toBe(true);
+    expect(character.heartsTotal).toBe(14);
+    expect(character.pendingCancellationScene).toBe(false);
   });
 
-  it('TC-025: penalización correcta en cancelación automática por vencimiento', () => {
+  // Actualizado por decisión P4 (2026-06-12): derecho de réplica — la penalización por
+  // vencimiento ya no es automática; se aplica al aceptar la pérdida.
+  it('TC-025: penalización correcta al aceptar la pérdida de una misión vencida', () => {
     const state = makeState(
       [makeCharacter({ heartsTotal: 20, level: 1 })],
       [makeMission({ difficulty: 'medium', deadline: addDays(TODAY, -1) })],
     );
-    const result = checkExpiredMissions(state, TODAY);
+    const result = acceptMissionLoss(state, 'mission-1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.penalty).toBe(5);
     const character = getCharacter(result.state, 'char-1');
     expect(character.heartsTotal).toBe(15);
     expect(character.level).toBe(1);
@@ -454,7 +469,7 @@ describe('Área 6: Nivel 3 / Boda', () => {
     );
     const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
     expect(pendingMissions(result.state, 'char-1')).toHaveLength(0);
-    const newMission = createMission(result.state, 'char-1', 'Nueva', 'easy', FUTURE_DEADLINE);
+    const newMission = createMission(result.state, 'char-1', 'Nueva', 'easy', FUTURE_DEADLINE, TODAY);
     expect(newMission).toEqual({ ok: false, error: 'character_not_active' });
     // Mucho tiempo después, el personaje archivado no dispara abandono
     const abandonment = checkAbandonment(result.state, addDays(TODAY, 60));
@@ -476,7 +491,7 @@ describe('Área 7: Límites', () => {
 
   it('TC-030: no se puede agregar una 4ta misión pendiente al mismo personaje', () => {
     const state = threePendingState();
-    const result = createMission(state, 'char-1', 'Misión 4', 'easy', FUTURE_DEADLINE);
+    const result = createMission(state, 'char-1', 'Misión 4', 'easy', FUTURE_DEADLINE, TODAY);
     expect(result).toEqual({ ok: false, error: 'pending_limit_reached' });
     expect(pendingMissions(state, 'char-1')).toHaveLength(3);
   });
@@ -486,7 +501,7 @@ describe('Área 7: Límites', () => {
       [makeCharacter()],
       [makeMission({ id: 'mission-1' }), makeMission({ id: 'mission-2', name: 'Misión 2' })],
     );
-    const result = createMission(state, 'char-1', 'Misión 3', 'medium', FUTURE_DEADLINE);
+    const result = createMission(state, 'char-1', 'Misión 3', 'medium', FUTURE_DEADLINE, TODAY);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(pendingMissions(result.state, 'char-1')).toHaveLength(3);
@@ -519,7 +534,7 @@ describe('Área 7: Límites', () => {
     const state = threePendingState();
     const completed = expectCompleted(completeMission(state, 'mission-1', TODAY));
     expect(pendingMissions(completed.state, 'char-1')).toHaveLength(2);
-    const result = createMission(completed.state, 'char-1', 'Misión 4', 'easy', FUTURE_DEADLINE);
+    const result = createMission(completed.state, 'char-1', 'Misión 4', 'easy', FUTURE_DEADLINE, TODAY);
     expect(result.ok).toBe(true);
   });
 });
@@ -578,16 +593,17 @@ describe('Área 8: Edge Cases', () => {
     expect(getCharacter(result.state, 'char-1').pendingCancellationScene).toBe(false);
   });
 
-  it('TC-040: misión completada un día después de la fecha límite está vencida', () => {
+  // Actualizado por decisión P4 (2026-06-12): derecho de réplica — completar un día tarde
+  // ya no falla la misión; otorga la recompensa con el multiplicador del primer tramo (75%).
+  it('TC-040: misión completada un día después de la fecha límite gana recompensa reducida', () => {
     const state = makeState(
       [makeCharacter({ heartsTotal: 10 })],
       [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -1) })],
     );
-    const result = completeMission(state, 'mission-1', TODAY);
-    expect(result.kind).toBe('expired');
-    if (result.kind !== 'expired') return;
-    expect(getMission(result.state, 'mission-1').status).toBe('failed');
-    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(7);
+    const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(4); // ceil(5 × 0.75)
+    expect(getMission(result.state, 'mission-1').status).toBe('completed');
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(14);
   });
 
   it('TC-041: acumulación de penalizaciones en la misma sesión no rompe el estado', () => {
@@ -620,5 +636,142 @@ describe('Área 8: Edge Cases', () => {
     const character = getCharacter(result.state, 'char-1');
     expect(character.level).toBe(0);
     expect(character.heartsTotal).toBe(25);
+  });
+});
+
+describe('P4: derecho de réplica para misiones vencidas (decisión Hector, 2026-06-12)', () => {
+  function expiredState(daysLate: number, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): GameState {
+    return makeState(
+      [makeCharacter({ heartsTotal: 10 })],
+      [makeMission({ difficulty, deadline: addDays(TODAY, -daysLate) })],
+    );
+  }
+
+  it('completar con 1 día de retraso aplica el 75% (mecanicas-detalle §4)', () => {
+    const result = expectCompleted(completeMission(expiredState(1), 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(8); // ceil(10 × 0.75)
+    expect(getCharacter(result.state, 'char-1').heartsTotal).toBe(18);
+  });
+
+  it('completar con 3 días de retraso sigue en el tramo del 75%', () => {
+    const result = expectCompleted(completeMission(expiredState(3), 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(8); // ceil(10 × 0.75)
+  });
+
+  it('completar con 5 días de retraso aplica el 50%', () => {
+    const result = expectCompleted(completeMission(expiredState(5), 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(5); // 10 × 0.5
+  });
+
+  it('completar con 30 días de retraso aplica el piso del 25% (sin ventana límite)', () => {
+    const result = expectCompleted(completeMission(expiredState(30, 'hard'), 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(5); // ceil(18 × 0.25)
+    expect(getMission(result.state, 'mission-1').status).toBe('completed');
+  });
+
+  it('completar tarde reinicia el reloj de abandono como cualquier misión completada', () => {
+    const result = expectCompleted(completeMission(expiredState(2), 'mission-1', TODAY));
+    const character = getCharacter(result.state, 'char-1');
+    expect(character.lastMissionCompletedDate).toBe(TODAY);
+    expect(character.inactivitySince).toBe(TODAY);
+  });
+
+  it('completar tarde puede subir de nivel con la recompensa reducida', () => {
+    const state = makeState(
+      [makeCharacter({ heartsTotal: 15 })],
+      [makeMission({ difficulty: 'medium', deadline: addDays(TODAY, -1) })],
+    );
+    const result = expectCompleted(completeMission(state, 'mission-1', TODAY));
+    expect(result.heartsEarned).toBe(8);
+    expect(result.leveledUp).toBe(true); // 15 + 8 = 23 ≥ 20
+    expect(result.newLevel).toBe(1);
+  });
+
+  it('aceptar la pérdida mantiene el flujo anterior: failed + penalización + escena', () => {
+    const result = acceptMissionLoss(expiredState(4), 'mission-1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.penalty).toBe(5);
+    expect(getMission(result.state, 'mission-1').status).toBe('failed');
+    expect(getMission(result.state, 'mission-1').heartsAwarded).toBe(-5);
+    const character = getCharacter(result.state, 'char-1');
+    expect(character.heartsTotal).toBe(5);
+    expect(character.pendingCancellationScene).toBe(true);
+  });
+
+  it('aceptar la pérdida NO reinicia el reloj de abandono (punto 3 de la decisión)', () => {
+    const inactivitySince = addDays(TODAY, -10);
+    const state = makeState(
+      [makeCharacter({ heartsTotal: 10, lastMissionCompletedDate: inactivitySince })],
+      [makeMission({ difficulty: 'easy', deadline: addDays(TODAY, -1) })],
+    );
+    const result = acceptMissionLoss(state, 'mission-1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(getCharacter(result.state, 'char-1').inactivitySince).toBe(inactivitySince);
+  });
+
+  it('aceptar la pérdida de una misión ya cerrada devuelve error', () => {
+    const state = makeState(
+      [makeCharacter()],
+      [makeMission({ status: 'completed', completedDate: TODAY, heartsAwarded: 5 })],
+    );
+    expect(acceptMissionLoss(state, 'mission-1')).toEqual({ ok: false, error: 'mission_not_pending' });
+  });
+
+  it('las vencidas pendientes siguen contando para el tope de 3 misiones (la deuda ocupa espacio)', () => {
+    const state = makeState(
+      [makeCharacter()],
+      [
+        makeMission({ id: 'mission-1', deadline: addDays(TODAY, -3) }),
+        makeMission({ id: 'mission-2', name: 'Misión 2', deadline: addDays(TODAY, -1) }),
+        makeMission({ id: 'mission-3', name: 'Misión 3' }),
+      ],
+    );
+    const result = createMission(state, 'char-1', 'Misión 4', 'easy', FUTURE_DEADLINE, TODAY);
+    expect(result).toEqual({ ok: false, error: 'pending_limit_reached' });
+    // Resolver una vencida (aceptando la pérdida) libera el cupo
+    const accepted = acceptMissionLoss(state, 'mission-1');
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    const retry = createMission(accepted.state, 'char-1', 'Misión 4', 'easy', FUTURE_DEADLINE, TODAY);
+    expect(retry.ok).toBe(true);
+  });
+});
+
+describe('P5: deadline mínimo HOY (decisión Hector, 2026-06-12)', () => {
+  it('se puede crear una misión con deadline hoy', () => {
+    // Antes el mínimo era mañana; el modelo mental del hábito es "hoy hago X".
+    const state = makeState([makeCharacter()]);
+    const result = createMission(state, 'char-1', 'Hoy mismo', 'easy', TODAY, TODAY);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.mission.deadline).toBe(TODAY);
+    // Y completarla hoy mismo no está vencida (TC-039): recompensa completa
+    const completed = expectCompleted(completeMission(result.state, result.mission.id, TODAY));
+    expect(completed.heartsEarned).toBe(5);
+  });
+
+  it('no se puede crear una misión con deadline anterior a hoy', () => {
+    const state = makeState([makeCharacter()]);
+    const result = createMission(state, 'char-1', 'Ayer', 'easy', addDays(TODAY, -1), TODAY);
+    expect(result).toEqual({ ok: false, error: 'deadline_in_past' });
+  });
+
+  it('rescheduleMission rechaza una fecha nueva en el pasado SIN penalizar', () => {
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission()]);
+    const result = rescheduleMission(state, 'mission-1', addDays(TODAY, -1), TODAY);
+    expect(result).toEqual({ ok: false, error: 'deadline_in_past' });
+    // El estado original no se tocó: la misión sigue pendiente y sin penalización
+    expect(getMission(state, 'mission-1').status).toBe('pending');
+    expect(getCharacter(state, 'char-1').heartsTotal).toBe(10);
+  });
+
+  it('rescheduleMission acepta mover el deadline a hoy', () => {
+    const state = makeState([makeCharacter({ heartsTotal: 10 })], [makeMission()]);
+    const result = rescheduleMission(state, 'mission-1', TODAY, TODAY);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.newMission.deadline).toBe(TODAY);
   });
 });

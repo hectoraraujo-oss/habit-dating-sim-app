@@ -1,15 +1,22 @@
 // Construcción pura de las escenas de apertura de la app (extraída de App.tsx para
 // poder testearla — QA M1). Dos fuentes de escenas:
 //
-// 1. Los checks de ESTA apertura (misiones vencidas + abandono), como siempre.
+// 1. El check de abandono de ESTA apertura.
 // 2. Re-hidratación: flags pendingAbandonmentScene/pendingCancellationScene que
 //    quedaron en true de sesiones anteriores (la app se cerró durante la escena,
 //    o se importó un respaldo con flags pendientes). Antes nadie los leía y la
 //    consecuencia narrativa se perdía para siempre aunque la penalización ya
 //    se había aplicado.
+//
+// Decisión P4 de Hector (2026-06-12) — derecho de réplica: las misiones vencidas ya NO se
+// auto-fallan al abrir la app (antes checkExpiredMissions las pasaba a failed con
+// penalización y escena). Quedan pendientes, visibles como "vencidas" en el Home, hasta que
+// el usuario las resuelva en la Pantalla 4 ("Sí lo hice (tarde)" o "Aceptar la pérdida").
+// Por eso buildStartup ya no genera escenas de cancelación por vencimiento: las escenas de
+// cancelación de apertura solo pueden venir de flags re-hidratados.
 
 import type { GameState, Mission } from '../types';
-import { acknowledgeCancellationScene, checkAbandonment, checkExpiredMissions } from './engine';
+import { acknowledgeCancellationScene, checkAbandonment } from './engine';
 
 export type StartupScene =
   | { kind: 'abandonment'; characterId: string }
@@ -35,34 +42,23 @@ function latestClosedMission(state: GameState, characterId: string): Mission | u
 }
 
 export function buildStartup(initial: GameState, today: string): StartupResult {
-  const expired = checkExpiredMissions(initial, today);
-  const abandonment = checkAbandonment(expired.state, today);
+  const abandonment = checkAbandonment(initial, today);
   let state = abandonment.state;
 
-  // Escenas de los eventos detectados en esta apertura
-  const startupScenes: StartupScene[] = [
-    ...abandonment.events.map((event) => ({ kind: 'abandonment' as const, characterId: event.characterId })),
-    ...expired.expiredMissionIds.flatMap((missionId) => {
-      const mission = state.missions.find((m) => m.id === missionId);
-      return mission
-        ? [{ kind: 'cancellation' as const, characterId: mission.characterId, missionId }]
-        : [];
-    }),
-  ];
+  // Escenas de los eventos detectados en esta apertura (solo abandono — ver nota P4 arriba)
+  const startupScenes: StartupScene[] = abandonment.events.map((event) => ({
+    kind: 'abandonment' as const,
+    characterId: event.characterId,
+  }));
 
-  // Re-hidratación: flags que siguen en true y que los checks de hoy NO encolaron
-  const queuedAbandonment = new Set(
-    startupScenes.filter((s) => s.kind === 'abandonment').map((s) => s.characterId),
-  );
-  const queuedCancellation = new Set(
-    startupScenes.filter((s) => s.kind === 'cancellation').map((s) => s.characterId),
-  );
+  // Re-hidratación: flags que siguen en true y que el check de hoy NO encoló
+  const queuedAbandonment = new Set(startupScenes.map((s) => s.characterId));
 
   for (const character of state.characters) {
     if (character.pendingAbandonmentScene && !queuedAbandonment.has(character.id)) {
       startupScenes.push({ kind: 'abandonment', characterId: character.id });
     }
-    if (character.pendingCancellationScene && !queuedCancellation.has(character.id)) {
+    if (character.pendingCancellationScene) {
       const mission = latestClosedMission(state, character.id);
       if (mission) {
         startupScenes.push({ kind: 'cancellation', characterId: character.id, missionId: mission.id });

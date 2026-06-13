@@ -17,6 +17,17 @@
 > inactividad baja un nivel adicional (acumulable), y en nivel 0 el personaje se va.
 > Los tests de Vitest (`src/game/qa-report.test.ts`) reflejan esta versión.
 
+> **Actualización 2026-06-12 (decisión P4 de Hector — derecho de réplica):** una misión
+> vencida ya NO se bloquea ni se falla automáticamente al abrir la app. Queda pendiente
+> (visible como "vencida") hasta que el usuario elija en la Pantalla 4: **"Sí lo hice
+> (tarde)"** (se completa con la recompensa reducida por el multiplicador de
+> mecanicas-detalle §4) o **"Aceptar la pérdida"** (failed + penalización + escena de
+> cancelación — el flujo que antes era automático). Las vencidas pendientes siguen contando
+> para el tope de 3 misiones por personaje. **TC-016, TC-024, TC-025 y TC-040 quedan
+> obsoletos en su redacción original**; los tests de Vitest reflejan el contrato nuevo.
+> Además, por la **decisión P5** del mismo día, el deadline mínimo de una misión es HOY
+> (antes era mañana): una misión con deadline hoy se considera vencida a partir de mañana.
+
 - `hearts_total` = acumulador de nivel (nunca baja) — **obsoleto, ver nota de arriba**
 - `hearts_current` = display (sí baja con penalizaciones) — **obsoleto, ver nota de arriba**
 - Dificultades: Fácil / Media / Difícil
@@ -167,6 +178,8 @@
 ---
 
 ### TC-016: Escena de cancelación automática al vencer fecha límite de misión
+> **Obsoleto desde 2026-06-12 (decisión P4) — ver nota en Convenciones.** La escena ya no es automática: aparece cuando el usuario acepta la pérdida.
+
 **Precondición:** Personaje con misión activa cuya fecha límite es hoy o ya pasó.
 **Acción:** El sistema detecta la misión vencida (trigger automático o el usuario intenta marcarla como completada después del vencimiento).
 **Resultado esperado:** Aparece escena de cancelación automática. No se puede marcar como completada. Se aplica penalización de corazones de la dificultad correspondiente.
@@ -244,6 +257,8 @@
 ---
 
 ### TC-024: Misión vencida no puede marcarse como completada
+> **Obsoleto desde 2026-06-12 (decisión P4) — ver nota en Convenciones.** Ahora SÍ puede marcarse como completada, con recompensa reducida.
+
 **Precondición:** Personaje con misión cuya fecha límite ya pasó.
 **Acción:** Usuario intenta marcar la misión como completada.
 **Resultado esperado:** El sistema bloquea la acción. Aparece escena de cancelación automática. Se aplica penalización. No se suman corazones.
@@ -253,6 +268,8 @@
 ---
 
 ### TC-025: Penalización correcta en cancelación automática por vencimiento
+> **Obsoleto desde 2026-06-12 (decisión P4) — ver nota en Convenciones.** La penalización se aplica al aceptar la pérdida, no automáticamente.
+
 **Precondición:** Personaje con hearts_current = 20. Misión vencida de dificultad Media.
 **Acción:** Trigger automático de cancelación por vencimiento.
 **Resultado esperado:** hearts_current = 15 (20 - 5). hearts_total sin cambio.
@@ -398,6 +415,8 @@
 ---
 
 ### TC-040: Misión completada un día después de la fecha límite (vencida)
+> **Obsoleto desde 2026-06-12 (decisión P4) — ver nota en Convenciones.** Completar un día tarde otorga la recompensa al 75% (multiplicador de mecanicas-detalle §4), no bloquea.
+
 **Precondición:** Misión con fecha límite = ayer.
 **Acción:** Usuario intenta marcar la misión como completada.
 **Resultado esperado:** El sistema bloquea la acción. Activa cancelación automática con penalización. No se suman corazones.

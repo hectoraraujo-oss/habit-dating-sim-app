@@ -7,6 +7,14 @@
 //   por penalizaciones — solo por abandono.
 // - El reloj de abandono nunca para: cada 21 días completos de inactividad baja un nivel;
 //   en nivel 0 el personaje se va. Varias bajadas pueden acumularse en un solo check.
+//
+// Decisiones de Hector (2026-06-12):
+// - P4 (derecho de réplica): una misión vencida ya NO se falla automáticamente al abrir la
+//   app. Queda pendiente (visible como "vencida") hasta que el usuario decida: completarla
+//   tarde con recompensa reducida por el multiplicador de mecanicas-detalle §4
+//   (completeMission), o aceptar la pérdida (acceptMissionLoss: failed + penalización +
+//   escena de cancelación). Supersede parcialmente la decisión D3 del 2026-05-31.
+// - P5: el deadline mínimo de una misión es HOY (antes era mañana).
 
 import type {
   Character,
@@ -144,7 +152,11 @@ export function deleteCharacter(state: GameState, characterId: string): DeleteCh
   };
 }
 
-export type CreateMissionError = 'character_not_found' | 'character_not_active' | 'pending_limit_reached';
+export type CreateMissionError =
+  | 'character_not_found'
+  | 'character_not_active'
+  | 'pending_limit_reached'
+  | 'deadline_in_past';
 
 export type CreateMissionResult =
   | { ok: true; state: GameState; mission: Mission }
@@ -156,12 +168,19 @@ export function createMission(
   name: string,
   difficulty: Difficulty,
   deadline: string,
+  today: string,
 ): CreateMissionResult {
   const character = getCharacter(state, characterId);
   if (!character) return { ok: false, error: 'character_not_found' };
   if (character.status !== 'active') return { ok: false, error: 'character_not_active' };
   if (pendingMissions(state, characterId).length >= MAX_PENDING_MISSIONS_PER_CHARACTER) {
     return { ok: false, error: 'pending_limit_reached' };
+  }
+  // Decisión P5 de Hector (2026-06-12): el deadline mínimo es HOY ("hoy hago X"), ya no
+  // mañana. Ojo con la semántica de vencimiento: las fechas se comparan por día (dates.ts,
+  // TC-039), así que una misión con deadline hoy se considera vencida mañana al abrir.
+  if (daysBetween(today, deadline) < 0) {
+    return { ok: false, error: 'deadline_in_past' };
   }
   const mission: Mission = {
     id: newId(),
@@ -185,18 +204,16 @@ export type CompleteMissionResult =
       newLevel: Level;
       wedding: boolean;
     }
-  // Misión vencida: no se puede completar — se marca failed y se aplica la penalización (TC-024/TC-040).
-  | { kind: 'expired'; state: GameState; penalty: number }
   | { kind: 'invalid'; error: 'mission_not_found' | 'mission_not_pending' };
 
+// Decisión P4 de Hector (2026-06-12) — derecho de réplica: una misión vencida SÍ se puede
+// completar ("Sí lo hice (tarde)"). calcHeartsEarned aplica el multiplicador por retraso de
+// mecanicas-detalle §4 (75% / 50% / 25%, redondeo hacia arriba). El camino alternativo
+// ("Aceptar la pérdida") es acceptMissionLoss, abajo.
 export function completeMission(state: GameState, missionId: string, today: string): CompleteMissionResult {
   const mission = state.missions.find((m) => m.id === missionId);
   if (!mission) return { kind: 'invalid', error: 'mission_not_found' };
   if (mission.status !== 'pending') return { kind: 'invalid', error: 'mission_not_pending' };
-
-  if (daysBetween(mission.deadline, today) > 0) {
-    return { kind: 'expired', state: failMission(state, mission), penalty: CANCEL_PENALTY[mission.difficulty] };
-  }
 
   const heartsEarned = calcHeartsEarned(mission.difficulty, mission.deadline, today);
   let next = patchMission(state, mission.id, {
@@ -269,7 +286,7 @@ export function cancelMission(state: GameState, missionId: string): CancelMissio
 
 export type RescheduleMissionResult =
   | { ok: true; state: GameState; penalty: number; newMission: Mission }
-  | { ok: false; error: 'mission_not_found' | 'mission_not_pending' };
+  | { ok: false; error: 'mission_not_found' | 'mission_not_pending' | 'deadline_in_past' };
 
 // Cambiar la fecha límite = cancelar la misión original (con penalización) y crear una
 // nueva con la fecha nueva (TC-023, bubble-decisions Workflow 6).
@@ -277,15 +294,27 @@ export function rescheduleMission(
   state: GameState,
   missionId: string,
   newDeadline: string,
+  today: string,
 ): RescheduleMissionResult {
   const mission = state.missions.find((m) => m.id === missionId);
   if (!mission) return { ok: false, error: 'mission_not_found' };
 
+  // Validar la fecha nueva ANTES de cancelar: si es inválida (P5: mínimo hoy), no se
+  // penaliza al usuario por un cambio que no va a suceder.
+  if (daysBetween(today, newDeadline) < 0) return { ok: false, error: 'deadline_in_past' };
+
   const cancelled = cancelMission(state, missionId);
   if (!cancelled.ok) return cancelled;
 
-  const created = createMission(cancelled.state, mission.characterId, mission.name, mission.difficulty, newDeadline);
-  // Al cancelar se liberó un slot de pendientes, así que crear no puede fallar por límite.
+  const created = createMission(
+    cancelled.state,
+    mission.characterId,
+    mission.name,
+    mission.difficulty,
+    newDeadline,
+    today,
+  );
+  // Al cancelar se liberó un slot de pendientes y la fecha ya se validó, así que crear no puede fallar.
   if (!created.ok) return { ok: false, error: 'mission_not_found' };
 
   return { ok: true, state: created.state, penalty: cancelled.penalty, newMission: created.mission };
@@ -297,24 +326,20 @@ function failMission(state: GameState, mission: Mission): GameState {
   return applyPenalty(next, mission.characterId, penalty);
 }
 
-export interface ExpiredMissionsResult {
-  state: GameState;
-  expiredMissionIds: string[];
-}
+export type AcceptMissionLossResult =
+  | { ok: true; state: GameState; penalty: number }
+  | { ok: false; error: 'mission_not_found' | 'mission_not_pending' };
 
-// Check al abrir la app: misiones pendientes con deadline anterior a hoy pasan a failed
-// con penalización (bubble-decisions Workflow 3). El día del deadline todavía es válido (TC-039).
-export function checkExpiredMissions(state: GameState, today: string): ExpiredMissionsResult {
-  let next = state;
-  const expiredMissionIds: string[] = [];
-  for (const mission of state.missions) {
-    if (mission.status !== 'pending' || daysBetween(mission.deadline, today) <= 0) continue;
-    const current = next.missions.find((m) => m.id === mission.id);
-    if (!current) continue;
-    next = failMission(next, current);
-    expiredMissionIds.push(mission.id);
-  }
-  return { state: next, expiredMissionIds };
+// Decisión P4 de Hector (2026-06-12): "Aceptar la pérdida" de una misión vencida — el flujo
+// que antes era automático (checkExpiredMissions al abrir la app) ahora es una decisión del
+// usuario en la Pantalla 4: la misión pasa a failed, se aplica la penalización por dificultad
+// y se agenda la escena de cancelación. La UI solo ofrece esta opción para misiones vencidas;
+// el motor exige únicamente que siga pendiente.
+export function acceptMissionLoss(state: GameState, missionId: string): AcceptMissionLossResult {
+  const mission = state.missions.find((m) => m.id === missionId);
+  if (!mission) return { ok: false, error: 'mission_not_found' };
+  if (mission.status !== 'pending') return { ok: false, error: 'mission_not_pending' };
+  return { ok: true, state: failMission(state, mission), penalty: CANCEL_PENALTY[mission.difficulty] };
 }
 
 // Las escenas se muestran una sola vez: la UI llama esto al cerrar la escena

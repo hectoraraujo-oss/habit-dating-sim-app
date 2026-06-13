@@ -116,6 +116,18 @@ Ejemplo en Nivel 2:
 
 ## 4. Penalización por misión vencida (completada tarde)
 
+> **Decisión P4 de Hector (2026-06-12) — derecho de réplica:** una misión vencida ya NO se
+> falla automáticamente al abrir la app (supersede parcialmente la decisión D3 del
+> 2026-05-31, que negaba todo crédito a vencidas). La misión queda pendiente, visible como
+> "vencida", hasta que el usuario la resuelva en la Pantalla 4 con una de dos opciones:
+> **"Sí lo hice (tarde)"** la completa con la recompensa reducida por el multiplicador de
+> esta tabla (días de retraso = hoy − deadline, comparados por día; redondeo hacia arriba),
+> o **"Aceptar la pérdida"** la pasa a `failed` con la penalización de §3 y la escena de
+> cancelación (el flujo que antes era automático). No hay ventana límite: el piso del
+> multiplicador es 25% sin importar cuántos días pasen. El reloj de abandono (§6) no cambia
+> y sigue corriendo. Las vencidas pendientes SIGUEN contando para el tope de 3 misiones
+> pendientes por personaje: la deuda ocupa espacio.
+
 Cuando el usuario completa una misión después de su fecha límite:
 
 | Tiempo de retraso | Corazones ganados |

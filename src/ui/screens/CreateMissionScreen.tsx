@@ -27,11 +27,12 @@ export function CreateMissionScreen({
 }: CreateMissionScreenProps) {
   const [name, setName] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
-  // Default: 3 días desde hoy. Rango: mañana hasta 14 días (no mismo día).
+  // Default: 3 días desde hoy. Rango: HOY hasta 14 días.
+  // Decisión P5 de Hector (2026-06-12): el mínimo pasó de mañana a hoy ("hoy hago X").
   const [deadline, setDeadline] = useState(addDays(today, 3));
   const [showNameError, setShowNameError] = useState(false);
 
-  const minDeadline = addDays(today, 1);
+  const minDeadline = today;
   const maxDeadline = addDays(today, 14);
   const limitReached = pendingMissions(state, character.id).length >= MAX_PENDING_MISSIONS_PER_CHARACTER;
   const valid = name.trim().length > 0 && deadline >= minDeadline && deadline <= maxDeadline;

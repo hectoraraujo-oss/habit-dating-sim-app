@@ -1,13 +1,15 @@
 // Raíz de la app: estado del juego + navegación entre las 7 pantallas.
-// Al abrir corre los checks de vencimiento y abandono (equivalente al "page load
-// del Home" de bubble-decisions) y encola las escenas pendientes — incluidas las
-// que quedaron sin reconocer de sesiones anteriores (buildStartup, QA M1).
+// Al abrir corre el check de abandono (equivalente al "page load del Home" de
+// bubble-decisions) y encola las escenas pendientes — incluidas las que quedaron sin
+// reconocer de sesiones anteriores (buildStartup, QA M1). Las misiones vencidas ya no
+// se auto-fallan al abrir (decisión P4 de Hector, 2026-06-12: derecho de réplica).
 // Cada cambio de estado se persiste en localStorage.
 
 import { useEffect, useState } from 'react';
 import type { Difficulty, GameState, Level } from './types';
 import { todayIso } from './game/dates';
 import {
+  acceptMissionLoss,
   acknowledgeAbandonmentScene,
   acknowledgeCancellationScene,
   cancelMission,
@@ -78,7 +80,7 @@ export default function App() {
   }
 
   function handleConfirmMission(characterId: string, name: string, difficulty: Difficulty, deadline: string) {
-    const result = createMission(state, characterId, name, difficulty, deadline);
+    const result = createMission(state, characterId, name, difficulty, deadline, today);
     if (!result.ok) {
       setToast('No se pudo crear la misión.');
       return;
@@ -88,22 +90,14 @@ export default function App() {
     setToast('Misión creada 💌');
   }
 
+  // P4 (2026-06-12): completar también aplica a misiones vencidas ("Sí lo hice (tarde)",
+  // con recompensa reducida por el multiplicador de retraso). El camino de "Aceptar la
+  // pérdida" es handleAcceptLoss.
   function handleCompleteMission(missionId: string) {
     const result = completeMission(state, missionId, today);
     if (result.kind === 'invalid') {
       setToast('Esta misión ya no está pendiente.');
       setScreen({ name: 'home' });
-      return;
-    }
-    if (result.kind === 'expired') {
-      const mission = result.state.missions.find((m) => m.id === missionId);
-      setState(result.state);
-      setScreen({
-        name: 'cancellation-scene',
-        characterId: mission?.characterId ?? '',
-        missionId,
-        auto: true,
-      });
       return;
     }
     const mission = result.state.missions.find((m) => m.id === missionId);
@@ -131,6 +125,20 @@ export default function App() {
     setState(result.state);
     setScreen({ name: 'home' });
     setToast(character ? `${character.name} fue eliminado.` : 'Personaje eliminado.');
+  }
+
+  // P4: "Aceptar la pérdida" de una misión vencida — failed + penalización + escena de
+  // cancelación (lo que antes hacía automáticamente el check de apertura).
+  function handleAcceptLoss(missionId: string) {
+    const mission = findMission(missionId);
+    const result = acceptMissionLoss(state, missionId);
+    if (!result.ok || !mission) {
+      setToast('Esta misión ya no está pendiente.');
+      setScreen({ name: 'home' });
+      return;
+    }
+    setState(result.state);
+    setScreen({ name: 'cancellation-scene', characterId: mission.characterId, missionId, auto: true });
   }
 
   function handleCancelMission(missionId: string) {
@@ -273,6 +281,7 @@ export default function App() {
           character={character}
           today={today}
           onComplete={() => handleCompleteMission(mission.id)}
+          onAcceptLoss={() => handleAcceptLoss(mission.id)}
           onCancelMission={() => handleCancelMission(mission.id)}
           onBack={() => setScreen(screen.from)}
         />
