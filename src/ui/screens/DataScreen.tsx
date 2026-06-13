@@ -3,9 +3,10 @@
 // respaldo manual (deuda de Fase 2, decisión P1 de Hector 2026-06-11).
 // Importar reemplaza TODO el estado actual, por eso pide confirmación.
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { GameState } from '../../types';
-import { exportStateJson, importStateJson } from '../../storage';
+import { exportStateJson } from '../../storage';
+import { ImportFileButton } from '../components/ImportFileButton';
 
 interface DataScreenProps {
   state: GameState;
@@ -15,9 +16,7 @@ interface DataScreenProps {
 }
 
 export function DataScreen({ state, today, onImport, onBack }: DataScreenProps) {
-  const fileInput = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<GameState | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   function handleExport() {
     const blob = new Blob([exportStateJson(state)], { type: 'application/json' });
@@ -27,20 +26,6 @@ export function DataScreen({ state, today, onImport, onBack }: DataScreenProps) 
     link.download = `habit-dating-sim-respaldo-${today}.json`;
     link.click();
     URL.revokeObjectURL(url);
-  }
-
-  async function handleFile(file: File) {
-    setError(null);
-    const result = importStateJson(await file.text());
-    if (!result.ok) {
-      setError(
-        result.error === 'invalid_json'
-          ? 'Ese archivo no es un JSON válido.'
-          : 'El archivo no es un respaldo de Habit Dating Sim (o es de otra versión de la app).',
-      );
-      return;
-    }
-    setPendingImport(result.state);
   }
 
   return (
@@ -79,24 +64,13 @@ export function DataScreen({ state, today, onImport, onBack }: DataScreenProps) 
           <p className="mt-1 text-sm text-stone-500">
             Restaura un respaldo descargado antes. Esto reemplaza por completo lo que tengas ahora.
           </p>
-          <button
-            onClick={() => fileInput.current?.click()}
-            className="mt-3 w-full rounded-xl border-2 border-pink-400 px-4 py-3 font-bold text-pink-600 transition hover:bg-pink-100"
-          >
-            Elegir archivo de respaldo
-          </button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleFile(file);
-              e.target.value = '';
-            }}
-          />
-          {error && <p className="mt-2 text-sm font-medium text-red-600">{error}</p>}
+          <div className="mt-3">
+            <ImportFileButton
+              label="Elegir archivo de respaldo"
+              className="w-full rounded-xl border-2 border-pink-400 px-4 py-3 font-bold text-pink-600 transition hover:bg-pink-100"
+              onValid={setPendingImport}
+            />
+          </div>
         </section>
       </main>
 

@@ -20,6 +20,8 @@ import {
 } from './game/engine';
 import { buildStartup, type StartupScene } from './game/startup';
 import { loadState, saveState } from './storage';
+import { StartScreen } from './ui/screens/StartScreen';
+import { OnboardingFlow } from './ui/onboarding/OnboardingFlow';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { CreateCharacterScreen } from './ui/screens/CreateCharacterScreen';
@@ -40,11 +42,66 @@ type Screen =
   | { name: 'cancellation-scene'; characterId: string; missionId: string; auto: boolean }
   | { name: 'data' };
 
+// Modo del gate de inicio (P7-a). Vive ANTES de la máquina de escenas (Riesgo R1 de la
+// spec): si la partida no está onboardeada, ni siquiera se construye buildStartup.
+type GateMode =
+  | { name: 'start' } // pantalla de inicio (Iniciar / Cargar partida)
+  | { name: 'onboarding'; initialState: GameState } // flujo del presentador
+  | { name: 'game'; initialState: GameState }; // partida onboardeada: flujo normal
+
 export default function App() {
   const today = todayIso();
+  // Decisión "pantalla de inicio vs Home" según state.onboarded. loadState ya normalizó el
+  // campo (respaldo viejo -> true). Una partida nueva nace con onboarded:false.
+  const [gate, setGate] = useState<GateMode>(() => {
+    const loaded = loadState();
+    return loaded.onboarded ? { name: 'game', initialState: loaded } : { name: 'start' };
+  });
+
+  if (gate.name === 'start') {
+    return (
+      <StartScreen
+        onStart={() => {
+          // El flag se compromete al INICIAR, no al terminar (decisión §2): si el usuario
+          // cierra a media intro no vuelve a la pantalla de inicio (cae a Home vacío).
+          const fresh: GameState = { ...loadState(), onboarded: true };
+          saveState(fresh);
+          setGate({ name: 'onboarding', initialState: fresh });
+        }}
+        onLoad={(loaded) => {
+          // Cargar archivo SIEMPRE omite el onboarding (P7): se fuerza onboarded:true y se
+          // entra al flujo normal (buildStartup -> escenas -> Home).
+          const imported: GameState = { ...loaded, onboarded: true };
+          saveState(imported);
+          setGate({ name: 'game', initialState: imported });
+        }}
+      />
+    );
+  }
+
+  if (gate.name === 'onboarding') {
+    return (
+      <OnboardingFlow
+        initialState={gate.initialState}
+        today={today}
+        onFinish={(finalState) => {
+          saveState(finalState);
+          setGate({ name: 'game', initialState: finalState });
+        }}
+      />
+    );
+  }
+
+  return <Game initialState={gate.initialState} today={today} />;
+}
+
+// Partida onboardeada: corre buildStartup y la máquina de escenas + las 7 pantallas.
+// Recibe initialState ya onboardeado, así que la máquina de escenas nunca evalúa un estado
+// nuevo (Riesgo R1). Es el flujo que existía antes del gate, intacto.
+function Game({ initialState, today }: { initialState: GameState; today: string }) {
   // Escenas de apertura (checks de hoy + flags pendientes de sesiones anteriores),
   // mostradas en secuencia antes del Home. Lógica pura en src/game/startup.ts.
-  const [init] = useState(() => buildStartup(loadState(), today));
+  const [init] = useState(() => buildStartup(initialState, today));
   const [state, setState] = useState<GameState>(init.state);
   const [startupScenes, setStartupScenes] = useState<StartupScene[]>(init.startupScenes);
   const [screen, setScreen] = useState<Screen>({ name: 'home' });

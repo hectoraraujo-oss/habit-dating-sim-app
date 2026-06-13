@@ -16,10 +16,22 @@ function defaultStorage(): StorageLike {
 export function createEmptyState(): GameState {
   return {
     schemaVersion: SCHEMA_VERSION,
+    // Una partida nueva nace SIN onboardear: arranca en la pantalla de inicio.
+    onboarded: false,
     characters: [],
     missions: [],
     happyEndings: [],
   };
+}
+
+// Migración suave del campo `onboarded` (no se subió SCHEMA_VERSION para no invalidar
+// respaldos viejos). Regla de producto: ausente o no booleano = ya onboarded (true).
+// Solo un `false` explícito (el que escribe createEmptyState) entra al onboarding. Así un
+// respaldo anterior a esta feature, que por definición es de un usuario existente, nunca
+// re-onboardea. Se aplica en la frontera de lectura (loadState / importStateJson), DESPUÉS
+// de validar, para no acoplar isValidState (y su contrato C1) a este campo.
+function normalizeLoaded(state: GameState): GameState {
+  return { ...state, onboarded: state.onboarded === false ? false : true };
 }
 
 // --- Validación profunda (QA C1) ---
@@ -126,7 +138,7 @@ export function loadState(storage: StorageLike = defaultStorage()): GameState {
   if (raw === null) return createEmptyState();
   try {
     const parsed: unknown = JSON.parse(raw);
-    return isValidState(parsed) ? parsed : createEmptyState();
+    return isValidState(parsed) ? normalizeLoaded(parsed) : createEmptyState();
   } catch {
     return createEmptyState();
   }
@@ -148,5 +160,5 @@ export function importStateJson(json: string): ImportResult {
     return { ok: false, error: 'invalid_json' };
   }
   if (!isValidState(parsed)) return { ok: false, error: 'invalid_schema' };
-  return { ok: true, state: parsed };
+  return { ok: true, state: normalizeLoaded(parsed) };
 }
