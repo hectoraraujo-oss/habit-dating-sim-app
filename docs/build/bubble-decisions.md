@@ -122,6 +122,12 @@ Bubble permite poner condición "Only when" en cada step. Usar tres steps condic
 
 ## Workflow 3: Deadline vencido (misión expirada)
 
+> **Obsoleto desde 2026-06-12 (decisión P4 de Hector — derecho de réplica):** este workflow
+> automático ya no existe en la app. Una misión vencida queda pendiente (visible como
+> "vencida") hasta que el usuario decida en la Pantalla 4: completarla tarde con recompensa
+> reducida o "Aceptar la pérdida" (que aplica los pasos de abajo de forma manual). Ver nota
+> en `mecanicas-detalle.md` §4.
+
 **Definición:** Mission.status = pending AND Mission.deadline < fecha de hoy.
 
 **Trigger:** Igual que Workflow 2 — se detecta en Page Load del Home o en Page Load de la pantalla de Perfil del personaje.

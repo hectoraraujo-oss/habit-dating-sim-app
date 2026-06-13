@@ -4,9 +4,10 @@ import type { Difficulty, Level } from '../types';
 import { HEARTS_BY_DIFFICULTY, LEVEL_THRESHOLDS, MAX_LEVEL } from './constants';
 import { daysBetween } from './dates';
 
-// Multiplicador por retraso (mecanicas-detalle §4). En el flujo actual una misión vencida
-// no puede completarse (qa-report TC-024/TC-040), así que en la práctica siempre aplica 1.0;
-// se conserva la función completa por fidelidad al doc de mecánicas.
+// Multiplicador por retraso (mecanicas-detalle §4): 1-3 días = 75%, 4-7 = 50%, 8+ = 25%.
+// Desde la decisión P4 de Hector (2026-06-12, derecho de réplica) este multiplicador SÍ
+// aplica en el flujo real: una misión vencida puede completarse tarde ("Sí lo hice (tarde)")
+// con la recompensa reducida. No hay ventana límite: el piso es 25% sin importar el retraso.
 export function lateMultiplier(daysLate: number): number {
   if (daysLate <= 0) return 1;
   if (daysLate <= 3) return 0.75;
