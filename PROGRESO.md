@@ -1,6 +1,21 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fases 0-3 completas + fixes QA (C1, M1) + decisiones P4/P5 implementadas — siguiente: Fase 4 (pulido)
+## Estado actual: Onboarding con Cupido (Bloques 1-3) listo — siguiente: arte real de Cupido (P2) + Bloque 4 (recap de regreso)
+
+**Onboarding con presentador "Cupido" (2026-06-13, spec/guion del vault en
+`projects/habit-dating-sim/equipo/onboarding/`):** MVP de los Bloques 1-3 construido. La app
+ya no abre directo al Home para un jugador nuevo: primero pasa por pantalla de inicio +
+intro narrada (voz Dr. Hakim, 6 cuadros) + tutorial guiado (crear personaje → su primera
+misión, sobre las pantallas REALES con franja de Cupido y spotlight) + handoff al Home con 1
+personaje y 1 misión. Campo nuevo `onboarded` en `GameState` con migración suave (NO se subió
+SCHEMA_VERSION: un respaldo viejo sin el campo se carga como `onboarded:true`, no se
+re-onboardea). Todo el arte es placeholder (recuadro con emoji por pose + fondo en gradiente
+rosa); el swap por los PNG reales es un solo punto (`src/ui/components/Cupido.tsx`). **114 tests
+en verde, lint y build limpios.** NO construido (follow-up): Bloque 4 (recap de regreso), que
+toca la máquina de escenas de `buildStartup`. Pendiente: revisión/commit/PR del Director y
+prueba manual de Hector + generación del arte real (6 poses de Cupido + 1 fondo).
+
+## Estado anterior: Fases 0-3 completas + fixes QA (C1, M1) + decisiones P4/P5 implementadas
 
 **Decisiones P4 y P5 de Hector (2026-06-12, registradas en DECISIONS.md del vault) implementadas:**
 P4 (derecho de réplica): una misión vencida ya no se auto-falla al abrir la app; queda
@@ -135,6 +150,44 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-13 — Onboarding con Cupido (Bloques 1-3)
+- Construido el MVP del onboarding con presentador (spec-y-recurrencia.md + flujo-y-guion.md
+  del vault). Tres bloques, tests primero en el más sensible (Bloque 1).
+- **Bloque 1 (modelo de datos):** campo `onboarded: boolean` en `GameState`.
+  `createEmptyState` lo pone en `false`. NO se subió SCHEMA_VERSION (subirlo borraría
+  partidas). `normalizeLoaded(state)` (`onboarded = state.onboarded === false ? false : true`)
+  se aplica en `loadState` e `importStateJson` DESPUÉS de validar: un respaldo viejo sin el
+  campo se carga como `true` (no re-onboardea), `false` explícito se conserva, basura → `true`.
+  `isValidState` NO usa `onboarded` como criterio de rechazo, así que los 18 tests de C1
+  (campos corruptos) siguen cayendo a estado vacío sin cambios. 6 tests nuevos de migración.
+- **Bloque 2 (gate de inicio):** `App.tsx` se partió en el gate (`App`) y el flujo normal
+  (`Game`). Si `onboarded === false` se renderiza `StartScreen` ANTES de construir
+  `buildStartup` (Riesgo R1: la máquina de escenas nunca evalúa un estado nuevo). "Iniciar
+  partida" marca `onboarded:true` y persiste AL INICIAR (no al terminar, §2: un abandono a
+  media intro cae a Home vacío, no a un loop). "Cargar partida" reusa el file picker (extraído
+  a `ImportFileButton`, compartido con `DataScreen`) y fuerza `onboarded:true` (cargar archivo
+  SIEMPRE omite el onboarding); archivo inválido muestra el error y se queda en la pantalla.
+- **Bloque 3 (flujo del presentador):** `OnboardingFlow` orquesta intro (6 cuadros, texto
+  exacto §2) → tutorial crear personaje → cuadro puente → tutorial crear primera misión →
+  handoff. `PresenterDialog` (pantalla completa, click para avanzar, "saltar intro ›") y
+  `CoachStrip` (franja inferior con Cupido en miniatura, no bloquea el resto). El tutorial
+  envuelve las pantallas REALES `CreateCharacterScreen` y `CreateMissionScreen` con dos props
+  nuevas opcionales (`tutorial` oculta Cancelar + spotlight con ring; callbacks para que
+  Cupido reaccione al campo); sin esas props el comportamiento es idéntico al anterior.
+  Encadena personaje → misión sin pasar por Home; "Empezar" cae al Home con 1 personaje + 1
+  misión. Copy paso a paso exacto de §3.
+- **Arte:** todo placeholder. Cupido es un recuadro con emoji por pose + etiqueta
+  (`src/ui/components/Cupido.tsx`, punto único de import: swap por los 6 PNG trivial). Fondo:
+  gradiente rosa sólido. Sin dependencias nuevas.
+- Decisiones donde los docs no especificaban: (1) el spotlight del tutorial se hizo con props
+  opcionales en las pantallas reales (ring + ocultar Cancelar) en vez de un overlay que
+  adivine posiciones; (2) `App` se partió en `App`/`Game` para que `buildStartup` no corra
+  nunca sobre un estado no onboardeado (R1); (3) la pantalla de inicio carga el respaldo SIN
+  modal de confirmación (no hay nada que pisar, a diferencia de `DataScreen`); (4) el paso
+  "recompensa" del tutorial de misión se dispara cuando el formulario queda válido.
+- **114 tests en verde** (108 + 6 de `onboarded`), `npm run lint` y `npm run build` limpios.
+  NO se tocó git. Bloque 4 (recap de regreso) queda como follow-up.
 
 ### 2026-06-12 — P4 derecho de réplica + P5 deadline hoy
 - Implementadas las decisiones P4 y P5 de Hector (DECISIONS.md del vault, 2026-06-12).

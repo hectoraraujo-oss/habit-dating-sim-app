@@ -23,6 +23,8 @@ function memoryStorage() {
 
 function sampleState(): GameState {
   const state = createEmptyState();
+  // Un respaldo de un usuario con partida: ya pasó el onboarding.
+  state.onboarded = true;
   state.characters.push({
     id: 'char-1',
     name: 'Gym',
@@ -238,5 +240,49 @@ describe('importStateJson — respaldos corruptos (QA C1)', () => {
     const storage = memoryStorage();
     storage.setItem(STORAGE_KEY, corruptState({ character: { inactivitySince: 'ayer' } }));
     expect(loadState(storage)).toEqual(createEmptyState());
+  });
+});
+
+// Onboarding: campo `onboarded` (migración suave, sin subir SCHEMA_VERSION).
+// Regla de producto: ausente o no booleano = ya onboarded (true). Solo el `false`
+// explícito de createEmptyState entra al onboarding.
+describe('onboarded — campo nuevo y migración suave', () => {
+  it('createEmptyState nace con onboarded: false', () => {
+    expect(createEmptyState().onboarded).toBe(false);
+  });
+
+  it('un respaldo viejo SIN onboarded se carga como onboarded: true (no re-onboardea)', () => {
+    const storage = memoryStorage();
+    const legacy = sampleState() as unknown as Record<string, unknown>;
+    delete legacy.onboarded; // simula un respaldo anterior a esta feature
+    storage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+    expect(loadState(storage).onboarded).toBe(true);
+  });
+
+  it('importStateJson de un respaldo viejo SIN onboarded lo normaliza a true', () => {
+    const legacy = sampleState() as unknown as Record<string, unknown>;
+    delete legacy.onboarded;
+    const result = importStateJson(JSON.stringify(legacy));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.state.onboarded).toBe(true);
+  });
+
+  it('un respaldo con onboarded: false explícito conserva false al cargar', () => {
+    const storage = memoryStorage();
+    saveState({ ...sampleState(), onboarded: false }, storage);
+    expect(loadState(storage).onboarded).toBe(false);
+  });
+
+  it('un respaldo con basura en onboarded se normaliza a true (seguro)', () => {
+    const storage = memoryStorage();
+    const garbage = { ...sampleState(), onboarded: 'sí' } as unknown as GameState;
+    saveState(garbage, storage);
+    expect(loadState(storage).onboarded).toBe(true);
+  });
+
+  it('roundtrip de un estado onboarded: false lo conserva (export/import)', () => {
+    const empty = createEmptyState();
+    const result = importStateJson(exportStateJson(empty));
+    expect(result).toEqual({ ok: true, state: empty });
   });
 });

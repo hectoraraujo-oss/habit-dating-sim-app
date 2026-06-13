@@ -52,6 +52,12 @@ export interface HappyEnding {
 
 export interface GameState {
   schemaVersion: number;
+  // true = el jugador ya pasó (o saltó) el onboarding alguna vez. Vive en la raíz, no en
+  // Character: es un hecho de la partida, no de un personaje (un veterano puede quedarse sin
+  // personajes y seguir siendo veterano). Default en createEmptyState: false. Compatibilidad:
+  // un respaldo viejo sin el campo se normaliza a true al cargar (no se re-onboardea a quien
+  // ya jugó) — ver normalizeLoaded en storage.ts. NO sube SCHEMA_VERSION.
+  onboarded: boolean;
   characters: Character[];
   missions: Mission[];
   happyEndings: HappyEnding[];
