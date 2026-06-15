@@ -39,10 +39,14 @@ export interface LevelProgress {
 }
 
 // Progreso dentro del nivel actual para la barra de corazones. null si ya está en nivel máximo.
+// `current` se ACOTA a [0, total] solo para PRESENTACIÓN (fix QA M2): heartsTotal puede caer
+// debajo del piso del nivel (deuda por penalizaciones, nivel no baja: decisión M-2026-06-11-A)
+// o quedar por encima del techo (bajó de nivel con corazones intactos, TC-042), y sin clamp la
+// barra mostraba "-20/40" o "55/40". No toca heartsTotal real ni la lógica de niveles.
 export function heartsToNextLevel(level: Level, heartsTotal: number): LevelProgress | null {
   if (level >= MAX_LEVEL) return null;
   const levelFloor = LEVEL_THRESHOLDS[level];
-  const current = heartsTotal - levelFloor;
   const total = LEVEL_THRESHOLDS[level + 1] - levelFloor;
+  const current = Math.min(total, Math.max(0, heartsTotal - levelFloor));
   return { current, total, display: `${current}/${total}` };
 }

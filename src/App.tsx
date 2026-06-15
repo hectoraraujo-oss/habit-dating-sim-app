@@ -192,7 +192,19 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
         evaluateCelebration: true,
         variantIndex: result.state.missions.length,
       });
-      if (reaction.celebration || reaction.milestone) {
+      // Hito menor (big === false) sin celebración: NO abre la pantalla de resultado.
+      // Se reconoce y se muestra como TOAST ligero al volver al Home (spec §5). El hito
+      // grande sigue como cuadro de Cupido; si hay celebración (R3) la pantalla de resultado
+      // se queda (la muestra junto al +💕) y el hito menor viaja adentro como pill, no aquí.
+      const minorMilestoneOnly =
+        reaction.milestone !== null && !reaction.milestone.big && !reaction.celebration;
+      if (minorMilestoneOnly && reaction.milestone) {
+        handleAcknowledgeMilestone(character.id, reaction.milestone.id);
+        setScreen({ name: 'home' });
+        setToast(`✦ ${reaction.milestone.line}`);
+        return;
+      }
+      if (reaction.celebration || (reaction.milestone && reaction.milestone.big)) {
         setScreen({
           name: 'mission-result',
           characterId: character.id,
@@ -221,6 +233,14 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
     if (character) {
       const reaction = reactionFor(character, state.missions, today);
       if (reaction.milestone) {
+        // Hito menor: NO abre la pantalla de resultado. Se reconoce y se muestra como toast
+        // ligero sobre el Perfil (spec §5). El grande mantiene su cuadro de Cupido.
+        if (!reaction.milestone.big) {
+          handleAcknowledgeMilestone(characterId, reaction.milestone.id);
+          setScreen({ name: 'profile', characterId });
+          setToast(`✦ ${reaction.milestone.line}`);
+          return;
+        }
         setScreen({
           name: 'mission-result',
           characterId,
@@ -276,6 +296,11 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
     setState(imported);
     setScreen({ name: 'home' });
     setToast('Respaldo importado 💾');
+  }
+
+  // El usuario descargó un respaldo: registra la fecha para apagar el nudge del Home.
+  function handleExported() {
+    setState((prev) => ({ ...prev, lastExportDate: today }));
   }
 
   function closeCancellationScene(characterId: string) {
@@ -348,17 +373,20 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
         return null;
       }
       return (
-        <ProfileScreen
-          state={state}
-          character={character}
-          today={today}
-          onBack={() => setScreen({ name: 'home' })}
-          onCreateMission={() =>
-            setScreen({ name: 'create-mission', characterId: character.id, from: screen })
-          }
-          onOpenMission={(missionId) => setScreen({ name: 'complete-mission', missionId, from: screen })}
-          onDeleteCharacter={() => handleDeleteCharacter(character.id)}
-        />
+        <>
+          <ProfileScreen
+            state={state}
+            character={character}
+            today={today}
+            onBack={() => setScreen({ name: 'home' })}
+            onCreateMission={() =>
+              setScreen({ name: 'create-mission', characterId: character.id, from: screen })
+            }
+            onOpenMission={(missionId) => setScreen({ name: 'complete-mission', missionId, from: screen })}
+            onDeleteCharacter={() => handleDeleteCharacter(character.id)}
+          />
+          {toast && <Toast message={toast} />}
+        </>
       );
     }
 
@@ -430,6 +458,7 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
           state={state}
           today={today}
           onImport={handleImportState}
+          onExported={handleExported}
           onBack={() => setScreen({ name: 'home' })}
         />
       );

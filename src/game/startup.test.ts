@@ -48,7 +48,7 @@ function makeMission(overrides: Partial<Mission> = {}): Mission {
 }
 
 function makeState(characters: Character[] = [], missions: Mission[] = []): GameState {
-  return { schemaVersion: SCHEMA_VERSION, onboarded: true, characters, missions, happyEndings: [] };
+  return { schemaVersion: SCHEMA_VERSION, onboarded: true, lastExportDate: null, characters, missions, happyEndings: [] };
 }
 
 describe('buildStartup — checks de esta apertura (comportamiento existente)', () => {

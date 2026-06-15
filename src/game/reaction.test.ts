@@ -271,7 +271,7 @@ describe('A1 — hitos / aniversarios', () => {
     // day30 tiene prioridad sobre week1 en el orden de evaluación de hitos
     expect(r.milestone?.id).toBe('week1'); // week1 va primero en la lista de alcanzados pendientes
     const acked = acknowledgeMilestone(
-      { schemaVersion: SCHEMA_VERSION, onboarded: true, characters: [char], missions: [], happyEndings: [] },
+      { schemaVersion: SCHEMA_VERSION, onboarded: true, lastExportDate: null, characters: [char], missions: [], happyEndings: [] },
       char.id,
       'week1',
     );
@@ -315,7 +315,7 @@ describe('A1 — hitos / aniversarios', () => {
 
 describe('acknowledgeMilestone', () => {
   function stateWith(char: Character): GameState {
-    return { schemaVersion: SCHEMA_VERSION, onboarded: true, characters: [char], missions: [], happyEndings: [] };
+    return { schemaVersion: SCHEMA_VERSION, onboarded: true, lastExportDate: null, characters: [char], missions: [], happyEndings: [] };
   }
 
   it('agrega el id a milestonesShown', () => {
@@ -344,6 +344,7 @@ describe('createCharacter — milestonesShown default', () => {
     const state: GameState = {
       schemaVersion: SCHEMA_VERSION,
       onboarded: true,
+      lastExportDate: null,
       characters: [],
       missions: [],
       happyEndings: [],

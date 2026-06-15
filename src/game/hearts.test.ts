@@ -52,4 +52,15 @@ describe('heartsToNextLevel', () => {
   it('devuelve null en nivel máximo', () => {
     expect(heartsToNextLevel(3, 150)).toBeNull();
   });
+
+  // Fix QA M2: el display se acota a [0, total]. heartsTotal puede quedar fuera del rango
+  // del nivel actual sin que el nivel cambie (deuda por penalizaciones, o bajada de nivel
+  // con corazones intactos). Antes la barra mostraba "-20/40" o "55/40".
+  it('acota el display a [0, total] cuando heartsTotal queda fuera del rango (M2)', () => {
+    // Nivel 1 (piso 20) con 0 corazones: antes daba current -20 → "-20/40". Ahora 0.
+    expect(heartsToNextLevel(1, 0)).toEqual({ current: 0, total: 40, display: '0/40' });
+    // Nivel 1 con 75 corazones (bajó de nivel 2 con corazones intactos, TC-042): antes
+    // current 55 → "55/40". Ahora se acota al techo del nivel.
+    expect(heartsToNextLevel(1, 75)).toEqual({ current: 40, total: 40, display: '40/40' });
+  });
 });

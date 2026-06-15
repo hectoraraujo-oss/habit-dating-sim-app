@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { Character, GameState, Mission } from '../../types';
 import { completedMissionsCount, daysTogether } from '../../game/engine';
 import { reactionFor } from '../../game/reaction';
-import { DIFFICULTY_LABEL, formatDeadline, LEVEL_STAGE } from '../format';
+import { DIFFICULTY_LABEL, formatDeadline, formatShortDate, LEVEL_STAGE } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
 import { Sprite } from '../components/Sprite';
 
@@ -63,7 +63,7 @@ export function ProfileScreen({
             <HeartsBar character={character} />
           </div>
           <p className="text-xs text-stone-400">
-            Juntos desde {character.createdDate} · {daysTogether(character, today)} días juntos
+            Juntos desde {formatShortDate(character.createdDate)} · {daysTogether(character, today)} días juntos
           </p>
 
           {/* R2 idle: línea reactiva del personaje (2da persona) + marco opcional de Cupido. */}
@@ -187,7 +187,7 @@ function HistoryRow({ mission }: { mission: Mission }) {
         {style.icon} {mission.name}
       </span>
       <span className="text-xs text-stone-400">
-        {DIFFICULTY_LABEL[mission.difficulty]} · {mission.completedDate ?? mission.deadline} {hearts}
+        {DIFFICULTY_LABEL[mission.difficulty]} · {formatShortDate(mission.completedDate ?? mission.deadline)} {hearts}
       </span>
     </li>
   );

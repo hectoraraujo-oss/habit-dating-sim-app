@@ -8,7 +8,7 @@ import type { Character, Mission } from '../../types';
 import { CANCEL_PENALTY, HEARTS_BY_DIFFICULTY } from '../../game/constants';
 import { daysBetween } from '../../game/dates';
 import { calcHeartsEarned } from '../../game/hearts';
-import { DIFFICULTY_LABEL, formatDeadline } from '../format';
+import { DIFFICULTY_LABEL, formatDeadline, formatShortDate } from '../format';
 import { Sprite } from '../components/Sprite';
 
 interface CompleteMissionScreenProps {
@@ -48,7 +48,7 @@ export function CompleteMissionScreen({
         <h1 className="text-xl font-bold text-stone-800">{mission.name}</h1>
         <p className={`mt-1 text-sm ${expired ? 'font-semibold text-red-600' : 'text-stone-500'}`}>
           {character.name} · {DIFFICULTY_LABEL[mission.difficulty]} ·{' '}
-          {expired ? `venció el ${mission.deadline}` : `vence ${formatDeadline(mission.deadline, today)}`}
+          {expired ? `venció el ${formatShortDate(mission.deadline)}` : `vence ${formatDeadline(mission.deadline, today)}`}
         </p>
 
         <div className="my-8">

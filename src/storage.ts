@@ -18,6 +18,8 @@ export function createEmptyState(): GameState {
     schemaVersion: SCHEMA_VERSION,
     // Una partida nueva nace SIN onboardear: arranca en la pantalla de inicio.
     onboarded: false,
+    // Nunca se ha exportado un respaldo todavía.
+    lastExportDate: null,
     characters: [],
     missions: [],
     happyEndings: [],
@@ -34,6 +36,10 @@ function normalizeLoaded(state: GameState): GameState {
   return {
     ...state,
     onboarded: state.onboarded === false ? false : true,
+    // Nudge de respaldo (ICE 504): respaldos viejos no tienen lastExportDate. Se inyecta
+    // null al leer (igual que onboarded) — sin subir SCHEMA_VERSION. Si ya viene como string
+    // ISO (garantizado por isValidState) se conserva tal cual.
+    lastExportDate: typeof state.lastExportDate === 'string' ? state.lastExportDate : null,
     // A1 (motor de reactividad, P8-a): respaldos viejos no tienen milestonesShown. Se
     // inyecta [] al leer, igual que onboarded — sin subir SCHEMA_VERSION. Si el campo ya
     // viene como array (de strings, garantizado por isValidCharacter) se conserva tal cual.
@@ -137,6 +143,10 @@ function isValidState(value: unknown): value is GameState {
   const state = value as Partial<GameState>;
   return (
     state.schemaVersion === SCHEMA_VERSION &&
+    // Nudge de respaldo: lastExportDate es opcional (respaldos viejos no lo tienen, la
+    // migración suave lo inyecta null). Presente debe ser null o fecha ISO real; otro tipo
+    // (number, string no-fecha…) rechaza el respaldo, coherente con C1.
+    isLastExportDate(state.lastExportDate) &&
     Array.isArray(state.characters) &&
     state.characters.every(isValidCharacter) &&
     Array.isArray(state.missions) &&
@@ -144,6 +154,11 @@ function isValidState(value: unknown): value is GameState {
     Array.isArray(state.happyEndings) &&
     state.happyEndings.every(isValidHappyEnding)
   );
+}
+
+// Ausente (respaldo viejo) o null = válido; presente debe ser fecha ISO real. Otro tipo rechaza.
+function isLastExportDate(value: unknown): boolean {
+  return value === undefined || value === null || isIsoDate(value);
 }
 
 export function saveState(state: GameState, storage: StorageLike = defaultStorage()): void {

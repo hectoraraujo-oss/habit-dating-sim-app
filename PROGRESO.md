@@ -162,6 +162,38 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 
 ## Historial de sesiones
 
+### 2026-06-14 — Pulido Fase 4 ola A — clamp M2, fechas es-MX, hito menor toast, nudge de respaldo
+- Cuatro arreglos de pulido de bajo riesgo. NO se tocó la economía de corazones, niveles ni
+  el reloj de 21 días. **154 tests en verde** (147 + 7 nuevos `it`), lint y build limpios. NO se tocó git.
+- **Clamp de la barra de corazones (bug QA M2):** `heartsToNextLevel` (`src/game/hearts.ts`)
+  ahora acota `current` a `[0, total]` SOLO para presentación. heartsTotal puede caer bajo el
+  piso del nivel (deuda por penalizaciones, nivel no baja: M-2026-06-11-A) o quedar por encima
+  del techo (bajó de nivel con corazones intactos, TC-042); sin clamp la barra mostraba
+  "-20/40" o "55/40". No cambia heartsTotal real ni la lógica de niveles. `HeartsBar` ya
+  clampaba el ANCHO; ahora el TEXTO también es coherente. Test del clamp agregado (nivel 1 con
+  0 → "0/40"; nivel 1 con 75 → "40/40").
+- **Fechas en es-MX:** nuevo `formatShortDate` ("4 jun 2026", `Intl` es-MX) en `src/ui/format.ts`
+  para fechas absolutas. Reemplazadas las 3 interpolaciones de fecha ISO cruda: "venció el …"
+  (`CompleteMissionScreen`), "Juntos desde …" (`ProfileScreen`) y la fecha del historial del
+  perfil (`ProfileScreen` HistoryRow). El resto ya usaba `formatDeadline`/`formatLongDate`; el
+  `value={deadline}` del date picker se deja ISO (lo exige el input).
+- **Hito menor como toast:** el hito con `big === false` (`week1`, `firstHard`) ya NO abre la
+  pantalla de resultado. En AMBOS paths (completar misión y abrir el Perfil) se reconoce
+  (`acknowledgeMilestone`) y se muestra como Toast ligero de App ("✦ …"); se agregó render del
+  Toast al case `profile`. El hito GRANDE sigue como cuadro de Cupido. Excepción: si un hito
+  menor coexiste con una celebración (R3) al completar, la pantalla de resultado se queda (por
+  el +💕 y la celebración) y el hito menor viaja adentro como la pill ligera que ya existía
+  (para no perderlo ni abrir doble surface).
+- **Nudge de respaldo (ICE 504, mitiga el riesgo #1):** campo `lastExportDate: string | null`
+  en `GameState` (raíz). `createEmptyState` → null. Migración EXACTA como onboarded/milestonesShown:
+  `normalizeLoaded` inyecta null si ausente; `isValidState` acepta ausente o (null | fecha ISO
+  real) y rechaza otro tipo (number, "ayer", etc.); NO sube SCHEMA_VERSION. Al exportar
+  (`DataScreen handleExport` → callback `onExported` → App `handleExported`) se setea a today.
+  En `HomeScreen`, banner discreto y descartable (en memoria, no persistente) que invita a
+  respaldar si hay ≥1 personaje Y (lastExportDate es null O pasaron >14 días). Enlaza a Respaldo
+  (`onOpenData`). Tono gentil. Tests de migración del campo nuevo (ausente → null; tipo inválido
+  y fecha no-real → rechaza) y de createEmptyState; los 18 tests de C1 siguen pasando.
+
 ### 2026-06-14 — Motor de reactividad (R2+R3+A1)
 - Construido el motor de reactividad aprobado en P8-a (spec del vault como fuente de verdad).
   Decisión del Director respetada: R3 (celebración de frecuencia) es SOLO texto + expresión,
