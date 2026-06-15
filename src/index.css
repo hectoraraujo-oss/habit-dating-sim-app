@@ -80,6 +80,87 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Ola 3 — clímax y nacimiento (dirección-visual.md §3, subsecciones "Subir de
+   nivel (celebración mayor)" y "Crear personaje").
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Fade-in del fondo de escena: "entramos a otro lugar" (no popup). ~300ms. */
+@keyframes scene-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Entrada cinematográfica de la imagen de escena: scale(1.04 -> 1). ~600ms. */
+@keyframes scene-image-in {
+  from { transform: scale(1.04); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Glow de celebración del título de nivel (un pulso, --shadow-celebrate). */
+@keyframes title-glow {
+  0%   { text-shadow: 0 0 0 rgb(225 29 128 / 0); }
+  50%  { text-shadow: 0 0 28px rgb(225 29 128 / 0.75); }
+  100% { text-shadow: 0 0 10px rgb(225 29 128 / 0.35); }
+}
+
+/* Variante boda: el glow amber pulsa DOS veces (clímax del 80%). */
+@keyframes title-glow-wedding {
+  0%   { text-shadow: 0 0 0 rgb(245 158 11 / 0); }
+  25%  { text-shadow: 0 0 30px rgb(245 158 11 / 0.85); }
+  50%  { text-shadow: 0 0 6px rgb(245 158 11 / 0.3); }
+  75%  { text-shadow: 0 0 30px rgb(245 158 11 / 0.85); }
+  100% { text-shadow: 0 0 12px rgb(245 158 11 / 0.4); }
+}
+
+/* Burst radial de corazones desde el centro: cada partícula viaja por --angle a
+   --distance, sube ligeramente (la "física" de la celebración) y se desvanece. */
+@keyframes heart-burst {
+  0% {
+    transform: rotate(var(--angle, 0deg)) translateY(0) scale(0.4);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle, 0deg)) translateY(calc(-1 * var(--distance, 120px))) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Aterrizaje de la card recién nacida: scale(0.85 -> 1) + opacity 0->1. ~350ms,
+   spring. Corre UNA vez al montar (animation, no transition). "Nació alguien". */
+@keyframes card-born {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.animate-scene-fade-in {
+  animation: scene-fade-in 300ms var(--ease-out-soft) both;
+}
+.animate-scene-image-in {
+  animation: scene-image-in 600ms var(--ease-out-soft) both;
+}
+.animate-title-glow {
+  /* happy-pop (entrada) + un pulso de glow. */
+  animation:
+    happy-pop 400ms var(--ease-spring) both,
+    title-glow 900ms var(--ease-out-soft) 200ms both;
+}
+.animate-title-glow-wedding {
+  animation:
+    happy-pop 400ms var(--ease-spring) both,
+    title-glow-wedding 1400ms var(--ease-out-soft) 200ms both;
+}
+.animate-heart-burst {
+  /* La rotación/translación viaja por --angle/--distance (vars por partícula). */
+  animation: heart-burst 900ms var(--ease-out-soft) both;
+}
+.animate-card-born {
+  animation: card-born 350ms var(--ease-spring) both;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    At-risk drama (dirección-visual.md §5). El sprite triste hace un "suspiro"
    idle muy lento (NO un shake de alarma) y el borde de la card "respira" con
    un glow naranja suave que aparece/desaparece. Movimiento lento triste =

@@ -1,6 +1,6 @@
 // Pantalla 1: Home — grid de 3 slots + misiones pendientes (flujo-pantallas.md).
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Character, GameState, Mission, SlotNumber } from '../../types';
 import { SLOT_NUMBERS } from '../../game/constants';
 import { daysBetween } from '../../game/dates';
@@ -17,6 +17,11 @@ const BACKUP_NUDGE_DAYS = 14;
 interface HomeScreenProps {
   state: GameState;
   today: string;
+  // Personaje recién creado: su card hace el aterrizaje de "nacimiento" una sola vez al
+  // aparecer (dirección-visual.md §3 "Crear personaje"). null si no hay ninguno nuevo.
+  justBornId?: string | null;
+  // Se llama una vez consumido el aterrizaje, para que App limpie el flag (no se repita).
+  onBirthSeen?: () => void;
   onOpenProfile: (characterId: string) => void;
   onCreateCharacter: () => void;
   onCreateMission: (characterId: string) => void;
@@ -27,6 +32,8 @@ interface HomeScreenProps {
 export function HomeScreen({
   state,
   today,
+  justBornId = null,
+  onBirthSeen,
   onOpenProfile,
   onCreateCharacter,
   onCreateMission,
@@ -35,6 +42,23 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const active = activeCharacters(state);
   const noCharacters = active.length === 0;
+
+  // El id recién nacido se captura UNA vez al montar (initializer perezoso de useState, que SÍ
+  // puede leerse en render): así el aterrizaje (animación CSS que corre una vez) usa un valor
+  // estable y no se interrumpe si el padre limpia su flag en mitad de la animación. HomeScreen
+  // se remonta al volver de "crear personaje", así que nace con el id nuevo en ese flujo. NO
+  // se vuelve a llamar setBornId (sin setState en efecto; regla del plugin react-hooks).
+  const [bornId] = useState(() => justBornId);
+  // Avisamos al padre, una sola vez, que ya consumimos el aterrizaje (para que no se repita en
+  // futuras visitas al Home). El efecto SOLO llama al callback: sin setState local. El callback
+  // se lee desde un ref para que el efecto dependa solo del id (no de la identidad del callback).
+  const onBirthSeenRef = useRef(onBirthSeen);
+  useEffect(() => {
+    onBirthSeenRef.current = onBirthSeen;
+  });
+  useEffect(() => {
+    if (bornId) onBirthSeenRef.current?.();
+  }, [bornId]);
 
   // Nudge de respaldo (ICE 504, mitiga el riesgo #1: pérdida de datos de localStorage).
   // Se invita a respaldar si hay al menos un personaje Y nunca se exportó (lastExportDate
@@ -114,6 +138,7 @@ export function HomeScreen({
               <CharacterCard
                 key={slot.id}
                 character={slot}
+                born={slot.id === bornId}
                 atRisk={isAtRisk(slot, today)}
                 // Escalada del at-risk por días de inactividad (§5): 'soft' 14-17,
                 // 'strong' 18-20 (más cerca del abandono a los 21).
@@ -188,6 +213,7 @@ export function HomeScreen({
 
 function CharacterCard({
   character,
+  born,
   atRisk,
   risk,
   riskLine,
@@ -195,6 +221,9 @@ function CharacterCard({
   onCreateMission,
 }: {
   character: Character;
+  // Recién creado: aterriza con scale(0.85->1)+opacity (card-born) y un latido único sobre
+  // el sprite (happy-pop). "Nació alguien", no "se agregó una fila" (§3 "Crear personaje").
+  born: boolean;
   atRisk: boolean;
   risk: RiskLevel;
   riskLine: string | null;
@@ -211,11 +240,20 @@ function CharacterCard({
         ? 'border-risk animate-risk-breathe'
         : 'border-border';
 
+  // El aterrizaje corre una vez al montar (CSS animation, no transition): la card solo se
+  // monta con esta clase si nació justo ahora. prefers-reduced-motion lo colapsa (guard CSS).
+  const bornClass = born ? 'animate-card-born' : '';
+
   return (
-    <div className={`flex flex-col items-center gap-2 rounded-card border-2 bg-surface p-4 ${borderClass}`}>
+    <div
+      className={`flex flex-col items-center gap-2 rounded-card border-2 bg-surface p-4 ${borderClass} ${bornClass}`}
+    >
       <button onClick={onOpen} className="flex flex-col items-center gap-2">
-        {/* En riesgo: grayscale triste + suspiro idle lento (NO shake). */}
-        <Sprite character={character} size={80} sad={atRisk} sigh={atRisk} />
+        {/* En riesgo: grayscale triste + suspiro idle lento (NO shake). Al nacer: latido único
+            sobre el sprite (happy-pop). El at-risk de un recién nacido no aplica en la práctica. */}
+        <span className={born ? 'animate-happy-pop inline-block' : 'inline-block'}>
+          <Sprite character={character} size={80} sad={atRisk} sigh={atRisk} />
+        </span>
         <span className="font-semibold text-ink">{character.name}</span>
         <span className="text-xs text-ink-soft">Nivel {character.level}</span>
       </button>
