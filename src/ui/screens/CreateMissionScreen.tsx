@@ -7,6 +7,7 @@ import { addDays } from '../../game/dates';
 import { pendingMissions } from '../../game/engine';
 import { DIFFICULTY_HINT, DIFFICULTY_ICON, DIFFICULTY_LABEL } from '../format';
 import { Sprite } from '../components/Sprite';
+import { Button } from '../components/Button';
 
 // Pasos del tutorial guiado: el orden en que Cupido acompaña los campos (flujo-y-guion §3).
 export type MissionTutorialStep = 'name' | 'difficulty' | 'deadline' | 'reward';
@@ -147,13 +148,13 @@ export function CreateMissionScreen({
               ⚠ Cambiar la fecha límite después penaliza corazones.
             </p>
 
-            <button
+            <Button
               onClick={handleConfirm}
               disabled={!valid && name.trim().length > 0}
-              className="mt-5 w-full rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
+              className="mt-5"
             >
               Confirmar misión
-            </button>
+            </Button>
           </>
         )}
       </main>

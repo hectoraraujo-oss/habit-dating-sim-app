@@ -27,12 +27,15 @@
   --color-scene-dark: #1c1917;   /* stone-900: fondo de LevelScene */
   --color-scene-abandon: #0c0a09;/* stone-950: fondo de AbandonmentScene */
 
-  /* Tipografía: el título usa la fuente mono pixel; el cuerpo NO */
-  --font-display: ui-monospace, "DejaVu Sans Mono", monospace; /* mono = voz "juego" */
-  --font-body: ui-sans-serif, system-ui, sans-serif;           /* legibilidad mobile */
+  /* Tipografía: el título usa la fuente mono pixel; el cuerpo es Baloo 2 (redonda, cálida).
+     Ola 5 (feel Duolingo §4): --font-body pasa de system-ui a Baloo 2 para TODO el chrome
+     (copy, botones, bocadillos, labels). --font-display (mono pixel) NO cambia: es la
+     voz "juego/máquina" en "+X 💕", "Nivel N", nombres en títulos de escena. */
+  --font-display: ui-monospace, "DejaVu Sans Mono", monospace;          /* mono = voz "juego" */
+  --font-body: "Baloo 2", ui-sans-serif, system-ui, sans-serif;          /* chrome redondo */
 
   /* Radios (cards = habitaciones; pill solo en CTA grande / badges) */
-  --radius-card: 0.75rem;   /* rounded-xl: cards de personaje */
+  --radius-card: 1rem;      /* rounded-2xl: cards más amables (Ola 5 §4: sube de 0.75rem) */
   --radius-cta: 1rem;       /* rounded-2xl: botón "LO HICE" */
   --radius-pill: 9999px;    /* badges, hearts bar */
 
@@ -40,11 +43,25 @@
   --shadow-card: 0 1px 3px rgb(157 23 77 / 0.08);     /* reposo de card */
   --shadow-cta: 0 4px 14px rgb(236 72 153 / 0.35);    /* CTA primario: tinte rosa */
   --shadow-celebrate: 0 0 28px rgb(225 29 128 / 0.45);/* glow de celebración */
+  /* Borde inferior 3D del botón estilo Duolingo (Ola 5 §2): sombra SÓLIDA (blur 0), no
+     difusa. La cara baja al presionar y este borde colapsa a 0 (sensación de hundir). */
+  --shadow-btn-3d: 0 4px 0 var(--color-primary-press);
 
   /* Easings reutilizables (dirección-visual.md §3) */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* overshoot: check, level-up */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);   /* entradas, llenados */
   --ease-in-quiet: cubic-bezier(0.4, 0, 1, 1);        /* fades de penalización */
+
+  /* Sans por default = Baloo 2: así TODO el chrome (que usa la pila sans de Tailwind)
+     hereda la fuente redonda sin tocar cada componente. La mono se respeta vía font-display. */
+  --font-sans: "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* El chrome arranca en medium (Baloo 2 se ve bien con más peso, look Duolingo §4). Los
+   títulos usan font-bold/extrabold como ya hacen; este es solo el peso base del cuerpo. */
+body {
+  font-family: var(--font-body);
+  font-weight: 500;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 // Crear personaje: formulario mínimo (el doc no define pantalla aparte — solo nombre).
 
 import { useState } from 'react';
+import { Button } from '../components/Button';
 
 interface CreateCharacterScreenProps {
   onConfirm: (name: string) => void;
@@ -53,13 +54,9 @@ export function CreateCharacterScreen({
           />
         </label>
 
-        <button
-          onClick={() => valid && onConfirm(name.trim())}
-          disabled={!valid}
-          className="mt-6 w-full rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
-        >
+        <Button onClick={() => valid && onConfirm(name.trim())} disabled={!valid} className="mt-6">
           Crear personaje
-        </button>
+        </Button>
       </main>
     </div>
   );
