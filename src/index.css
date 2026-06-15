@@ -1,1 +1,96 @@
 @import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Tokens de diseño — Fase 4, Ola 1 (dirección-visual.md §1).
+   Roles de color (no nombres de color: roles), fuentes, radios, sombras y
+   easings. Definidos con @theme de Tailwind v4 para generar utilities
+   (bg-surface, text-love, shadow-cta, ease-spring, etc.) sin tocar cada
+   componente de golpe. Base pink/stone conservada.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Roles de color */
+  --color-bg: #fdf2f8;          /* pink-50: fondo de toda la app */
+  --color-surface: #ffffff;      /* cards, headers, footers */
+  --color-surface-soft: #fff1f5; /* pink-50/70: cajas de diálogo, idle */
+  --color-border: #fbcfe2;       /* pink-200: bordes de card y divisores */
+  --color-primary: #ec4899;      /* pink-500: CTA principal */
+  --color-primary-press: #db2777;/* pink-600: hover/press del CTA */
+  --color-love: #e11d80;         /* acento de amor: corazones, +X 💕, conteo */
+  --color-love-soft: #fbcfe2;    /* relleno vacío de la hearts bar */
+  --color-risk: #fb923c;         /* orange-400: at-risk (tristeza, no alarma roja) */
+  --color-risk-strong: #f97316;  /* orange-500: at-risk en días 18-20 */
+  --color-danger: #ef4444;       /* red-500: solo pérdida real (penalización, eliminar) */
+  --color-milestone: #f59e0b;    /* amber-500: hitos y "consolidado" */
+  --color-ink: #44403c;          /* stone-700: texto principal */
+  --color-ink-soft: #78716c;     /* stone-500: texto secundario */
+  --color-ink-faint: #a8a29e;    /* stone-400: metadata, deshabilitado */
+  --color-scene-dark: #1c1917;   /* stone-900: fondo de LevelScene */
+  --color-scene-abandon: #0c0a09;/* stone-950: fondo de AbandonmentScene */
+
+  /* Tipografía: el título usa la fuente mono pixel; el cuerpo NO */
+  --font-display: ui-monospace, "DejaVu Sans Mono", monospace; /* mono = voz "juego" */
+  --font-body: ui-sans-serif, system-ui, sans-serif;           /* legibilidad mobile */
+
+  /* Radios (cards = habitaciones; pill solo en CTA grande / badges) */
+  --radius-card: 0.75rem;   /* rounded-xl: cards de personaje */
+  --radius-cta: 1rem;       /* rounded-2xl: botón "LO HICE" */
+  --radius-pill: 9999px;    /* badges, hearts bar */
+
+  /* Sombras: dos niveles, nada de blur difuso */
+  --shadow-card: 0 1px 3px rgb(157 23 77 / 0.08);     /* reposo de card */
+  --shadow-cta: 0 4px 14px rgb(236 72 153 / 0.35);    /* CTA primario: tinte rosa */
+  --shadow-celebrate: 0 0 28px rgb(225 29 128 / 0.45);/* glow de celebración */
+
+  /* Easings reutilizables (dirección-visual.md §3) */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* overshoot: check, level-up */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);   /* entradas, llenados */
+  --ease-in-quiet: cubic-bezier(0.4, 0, 1, 1);        /* fades de penalización */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Keyframes de la secuencia "completar misión" (dirección-visual.md §3).
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes happy-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes float-heart {
+  0%   { transform: translate(0, 0) scale(0.8); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(var(--drift, 0), -88px) scale(1.1); opacity: 0; }
+}
+
+@keyframes bar-shimmer {
+  0%   { filter: brightness(1); }
+  50%  { filter: brightness(1.25); }
+  100% { filter: brightness(1); }
+}
+
+/* Utilities de animación para la secuencia (consumidas por los componentes). */
+.animate-happy-pop {
+  animation: happy-pop 400ms var(--ease-spring) both;
+}
+.animate-float-heart {
+  animation: float-heart 600ms var(--ease-out-soft) both;
+}
+.animate-bar-shimmer {
+  animation: bar-shimmer 600ms var(--ease-out-soft);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Guard global de accesibilidad: con prefers-reduced-motion las animaciones
+   colapsan a ~1ms (dirección-visual.md §3). El conteo numérico hace lo
+   equivalente en JS (useCountUp setea el valor final directo).
+   ───────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
