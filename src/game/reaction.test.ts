@@ -8,7 +8,13 @@ import type { Character, GameState, Mission } from '../types';
 import { SCHEMA_VERSION } from './constants';
 import { addDays } from './dates';
 import { acknowledgeMilestone, createCharacter } from './engine';
-import { deriveSignals, reactionFor } from './reaction';
+import {
+  deriveSignals,
+  reactionFor,
+  resultNeedsContinue,
+  type Celebration,
+  type MilestoneReaction,
+} from './reaction';
 import { CELEBRATION_COPY, MILESTONE_COPY, STATE_COPY } from './reactionCopy';
 
 const TODAY = '2026-06-15';
@@ -372,5 +378,47 @@ describe('deriveSignals', () => {
     expect(s.lastDifficulty).toBe('hard');
     expect(s.consecutiveDays).toBe(true);
     expect(s.nearLevelUp).toBe(true);
+  });
+});
+
+// --- resultNeedsContinue: ¿pantalla de resultado pide "Continuar" o auto-avanza? ---
+
+describe('resultNeedsContinue (Fase 4 Ola 1.5)', () => {
+  const celebration: Celebration = {
+    trigger: 'threeInWeek',
+    characterLine: 'Vamos volando.',
+    cupidoLine: null,
+  };
+  const bigMilestone: MilestoneReaction = {
+    id: 'day30',
+    line: 'Un mes juntos.',
+    cupidoLine: '¡Un mes!',
+    big: true,
+  };
+  const minorMilestone: MilestoneReaction = {
+    id: 'week1',
+    line: 'Una semana.',
+    cupidoLine: null,
+    big: false,
+  };
+
+  it('complete normal (ambos null): auto-avanza, NO pide Continuar', () => {
+    expect(resultNeedsContinue(null, null)).toBe(false);
+  });
+
+  it('hito menor solo: auto-avanza, NO pide Continuar', () => {
+    expect(resultNeedsContinue(null, minorMilestone)).toBe(false);
+  });
+
+  it('hay celebración: pide Continuar (algo que leer)', () => {
+    expect(resultNeedsContinue(celebration, null)).toBe(true);
+  });
+
+  it('hito GRANDE: pide Continuar (cuadro de Cupido)', () => {
+    expect(resultNeedsContinue(null, bigMilestone)).toBe(true);
+  });
+
+  it('celebración + hito menor: pide Continuar (la celebración manda)', () => {
+    expect(resultNeedsContinue(celebration, minorMilestone)).toBe(true);
   });
 });

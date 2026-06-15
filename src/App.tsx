@@ -48,6 +48,9 @@ type Screen =
       heartsEarned: number;
       celebration: Celebration | null;
       milestone: MilestoneReaction | null;
+      // De dónde vino: 'complete' (completar misión, vuelve al Home) o 'profile' (hito
+      // grande cruzado al abrir el Perfil, vuelve al Perfil sin toast de +💕).
+      returnTo: 'home' | 'profile';
     }
   | { name: 'cancellation-scene'; characterId: string; missionId: string; auto: boolean }
   | { name: 'data' };
@@ -183,37 +186,25 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
     }
 
     // Motor de reactividad (P8-a): sobre el estado YA actualizado, evalúa R3 (celebración
-    // de frecuencia) y A1 (hito pendiente). Si hay algo que mostrar, va a la pantalla de
-    // resultado (+💕 → celebración del personaje → cuadro de Cupido del hito). Si no, el
-    // toast de siempre.
+    // de frecuencia) y A1 (hito pendiente). Fase 4 Ola 1.5: TODO complete que no sea subida
+    // de nivel pasa por la pantalla de resultado (juice en CADA complete). La pantalla decide
+    // sola si pide "Continuar" (hay celebración o hito grande que leer) o si auto-avanza
+    // (complete normal / hito menor) — ver resultNeedsContinue.
     const character = mission ? result.state.characters.find((c) => c.id === mission.characterId) : undefined;
     if (mission && character) {
       const reaction = reactionFor(character, result.state.missions, today, {
         evaluateCelebration: true,
         variantIndex: result.state.missions.length,
       });
-      // Hito menor (big === false) sin celebración: NO abre la pantalla de resultado.
-      // Se reconoce y se muestra como TOAST ligero al volver al Home (spec §5). El hito
-      // grande sigue como cuadro de Cupido; si hay celebración (R3) la pantalla de resultado
-      // se queda (la muestra junto al +💕) y el hito menor viaja adentro como pill, no aquí.
-      const minorMilestoneOnly =
-        reaction.milestone !== null && !reaction.milestone.big && !reaction.celebration;
-      if (minorMilestoneOnly && reaction.milestone) {
-        handleAcknowledgeMilestone(character.id, reaction.milestone.id);
-        setScreen({ name: 'home' });
-        setToast(`✦ ${reaction.milestone.line}`);
-        return;
-      }
-      if (reaction.celebration || (reaction.milestone && reaction.milestone.big)) {
-        setScreen({
-          name: 'mission-result',
-          characterId: character.id,
-          heartsEarned: result.heartsEarned,
-          celebration: reaction.celebration,
-          milestone: reaction.milestone,
-        });
-        return;
-      }
+      setScreen({
+        name: 'mission-result',
+        characterId: character.id,
+        heartsEarned: result.heartsEarned,
+        celebration: reaction.celebration,
+        milestone: reaction.milestone,
+        returnTo: 'home',
+      });
+      return;
     }
 
     setScreen({ name: 'home' });
@@ -247,6 +238,7 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
           heartsEarned: 0,
           celebration: null,
           milestone: reaction.milestone,
+          returnTo: 'profile',
         });
         return;
       }
@@ -468,16 +460,35 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
       if (!character) {
         return null;
       }
+      const { celebration, milestone, returnTo } = screen;
+      // El destino y el toast los decide App al cerrar la pantalla:
+      //  - returnTo 'profile' (hito grande cruzado al abrir el Perfil): vuelve al Perfil, sin
+      //    toast (no hubo misión que sumara corazones).
+      //  - returnTo 'home', hito menor (big === false): Home con el toast "✦ <línea>" (spec §5).
+      //  - returnTo 'home', resto (complete normal / celebración / hito grande): Home con el
+      //    +💕 de siempre. (El hito menor ya se reconoce dentro de la pantalla vía onAcknowledge.)
+      const finish = () => {
+        if (returnTo === 'profile') {
+          setScreen({ name: 'profile', characterId: character.id });
+          return;
+        }
+        setScreen({ name: 'home' });
+        if (milestone && !milestone.big) {
+          setToast(`✦ ${milestone.line}`);
+        } else {
+          setToast(`¡Misión completada! +${screen.heartsEarned} 💕`);
+        }
+      };
       return (
         <MissionResultScreen
           character={character}
           heartsEarned={screen.heartsEarned}
-          celebration={screen.celebration}
-          milestone={screen.milestone}
+          celebration={celebration}
+          milestone={milestone}
           onAcknowledgeMilestone={(milestoneId) =>
             handleAcknowledgeMilestone(character.id, milestoneId)
           }
-          onContinue={() => setScreen({ name: 'profile', characterId: character.id })}
+          onContinue={finish}
         />
       );
     }
