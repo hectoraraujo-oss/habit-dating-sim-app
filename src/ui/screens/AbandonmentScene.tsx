@@ -5,6 +5,7 @@
 import type { Character, GameState } from '../../types';
 import { completedMissionsCount, daysTogether } from '../../game/engine';
 import { Button } from '../components/Button';
+import { CupidoMascot } from '../components/CupidoMascot';
 import { ABANDONMENT_SCENE } from '../sprites';
 
 interface AbandonmentSceneProps {
@@ -59,6 +60,11 @@ export function AbandonmentScene({ state, character, today, onClose }: Abandonme
             Bajó a Nivel {character.level}. Completa una misión pronto o se irá de verdad.
           </p>
         )}
+
+        {/* Ola 6 (P4 / 80-20 INVIOLABLE): Cupido como consuelo digno, NO celebración. Entra
+            SOBRIO (tone="loss": ease-in lento, sin spring de overshoot, SIN bob idle), pose
+            'serena'. Cero confeti, cero festejo: es la pérdida. */}
+        <CupidoMascot pose="serena" size={72} tone="loss" className="mt-2 opacity-90" />
       </div>
 
       {/* CTA sobrio de pérdida (§B 80/20): variant secondary, sin fiesta. */}

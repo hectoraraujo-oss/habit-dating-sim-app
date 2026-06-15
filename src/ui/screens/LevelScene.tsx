@@ -11,13 +11,16 @@
 //
 // prefers-reduced-motion: colapsa a un fade simple (sin burst). El burst NO se monta.
 
+import { useEffect } from 'react';
 import type { Character, GameState, Level } from '../../types';
 import { completedMissionsCount, daysTogether } from '../../game/engine';
 import { LEVEL_STAGE } from '../format';
 import { levelSceneFor } from '../sprites';
 import { HeartBurst } from '../components/HeartBurst';
+import { CupidoMascot } from '../components/CupidoMascot';
 import { Button } from '../components/Button';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { scheduleMilestoneConfetti } from '../confetti';
 
 interface LevelSceneProps {
   state: GameState;
@@ -37,6 +40,14 @@ export function LevelScene({ state, character, newLevel, wedding, today, onConti
   const days = daysTogether(character, today);
   const completed = completedMissionsCount(state, character.id);
   const reduced = useReducedMotion();
+
+  // Confeti de hito (Ola 6, §5): MEDIO al subir de nivel, MÁXIMO (doble, escalonado) en boda.
+  // Dispara DESPUÉS del pop del sprite (T≈200ms, lo maneja scheduleMilestoneConfetti) y ENCIMA
+  // del heart-burst CSS existente (no lo reemplaza). canvas-confetti respeta reduced-motion
+  // nativo (disableForReducedMotion:true). Timers limpiados en el cleanup del efecto.
+  useEffect(() => {
+    return scheduleMilestoneConfetti(wedding);
+  }, [wedding]);
 
   // Glow del título: un pulso normal; en boda pulsa dos veces (amber). Con reduced-motion
   // el guard CSS global ya colapsa la animación, así que dejamos la clase sin condicionar.
@@ -83,6 +94,10 @@ export function LevelScene({ state, character, newLevel, wedding, today, onConti
             <p className="max-w-md text-stone-300">{NARRATIVE[newLevel] ?? ''}</p>
           </>
         )}
+        {/* Ola 6 (P4): Cupido al frente celebrando el nivel/boda (pose 'celebrar', spring +
+            bob idle), como Duo. Encima del burst CSS, debajo del título/narrativa. */}
+        <CupidoMascot pose="celebrar" size={96} className="relative mt-1" />
+
         <p className="text-sm text-stone-400">
           {days} días juntos · {completed} misiones completadas
         </p>

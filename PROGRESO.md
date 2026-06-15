@@ -1,6 +1,8 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 4 Ola 5 "feel Duolingo" — la FIRMA (botón 3D + Baloo 2). Dos piezas, sin rediseñar pantallas ni tocar lógica: (A) tipografía Baloo 2 cargada local vía `@fontsource` (pesos 500/600/700/800), `--font-body` y `--font-sans` mapeados a Baloo 2 (chrome redondo, peso base medium), `--radius-card` 0.75rem→1rem; la mono pixel `--font-display` y el pixel art NO se tocan (identidad); (B) botón 3D estilo Duolingo (`src/ui/components/Button.tsx`, `motion.button`): cara primary + borde inferior 3D sólido de 4px (`--shadow-btn-3d`) que colapsa al presionar mientras la cara baja 4px (`whileTap`, spring stiffness 600/damping 20), con variantes primary/secondary/destructive y `useReducedMotion()`. Aplicado como drop-in a TODOS los CTA primarios (LO HICE, Continuar, Crear personaje/misión, Iniciar partida, Empezar, Crear nueva misión); los CTA sobrios de pérdida (Aceptar la pérdida, Entendido de cancelación/abandono) usan `variant="secondary"` sin fiesta y Eliminar usa `variant="destructive"`. **172 tests verdes, lint y build (tsc+vite) limpios.** NO se tocó git. Siguiente: Olas 6-8 (Cupido-Duo + confeti, springs, AnimatePresence) y verificación manual del Director. (La Ola 4 dejó de ser la última visual: la dirección "feel Duolingo" abrió Olas 5-8.)
+## Estado actual: Fase 4 Ola 6 "feel Duolingo" — Cupido mascota al frente + confeti de hito (P4 + §5). Dos piezas, sin tocar lógica de escenas ni la economía del juego: (A) **Cupido como Duo** — nuevo `src/ui/components/CupidoMascot.tsx` que eleva a Cupido de LÍNEA DE TEXTO a SPRITE reactivo al frente. En CELEBRACIÓN entra con spring (`stiffness 400, damping 16`) + un "bob" idle suave (`y:[0,-4,0]`, ~2s loop) mientras está presente, como Duo. Montado en MissionResultScreen (cuadro de hito grande, pose 'corazon'; bocadillo de celebración R3 con línea de Cupido, pose 'celebrar') y LevelScene (pose 'celebrar', nivel y boda). En PÉRDIDA (AbandonmentScene) entra SOBRIO vía `tone="loss"`: ease-in lento sin overshoot, SIN bob idle, pose 'serena' — consuelo digno, nunca festivo (80/20). `useReducedMotion()` de motion/react: sin spring ni bob. (B) **Confeti de hito** — nuevo `src/ui/confetti.ts` que envuelve canvas-confetti con `disableForReducedMotion:true` en cada llamada y dispara DESPUÉS del pop del sprite (T≈200ms): MEDIO al subir de nivel (~80 partículas, love+primary+blanco, spread 70, una descarga), MÁXIMO en boda (dos descargas escalonadas 0/250ms desde x:0.2 y x:0.8, ~120 c/u, milestone+love+blanco), ENCIMA del heart-burst CSS. Completar misión normal y la PÉRDIDA: CERO confeti (80/20 inviolable). Timers limpiados en cleanup. **172 tests verdes, lint y build limpios.** NO se tocó git. Siguiente: Olas 7-8 (spring de hearts bar, stagger del Home, AnimatePresence) y verificación manual del Director.
+
+## Estado anterior: Fase 4 Ola 5 "feel Duolingo" — la FIRMA (botón 3D + Baloo 2). Dos piezas, sin rediseñar pantallas ni tocar lógica: (A) tipografía Baloo 2 cargada local vía `@fontsource` (pesos 500/600/700/800), `--font-body` y `--font-sans` mapeados a Baloo 2 (chrome redondo, peso base medium), `--radius-card` 0.75rem→1rem; la mono pixel `--font-display` y el pixel art NO se tocan (identidad); (B) botón 3D estilo Duolingo (`src/ui/components/Button.tsx`, `motion.button`): cara primary + borde inferior 3D sólido de 4px (`--shadow-btn-3d`) que colapsa al presionar mientras la cara baja 4px (`whileTap`, spring stiffness 600/damping 20), con variantes primary/secondary/destructive y `useReducedMotion()`. Aplicado como drop-in a TODOS los CTA primarios (LO HICE, Continuar, Crear personaje/misión, Iniciar partida, Empezar, Crear nueva misión); los CTA sobrios de pérdida (Aceptar la pérdida, Entendido de cancelación/abandono) usan `variant="secondary"` sin fiesta y Eliminar usa `variant="destructive"`. **172 tests verdes, lint y build (tsc+vite) limpios.** NO se tocó git. Siguiente: Olas 6-8 (Cupido-Duo + confeti, springs, AnimatePresence) y verificación manual del Director. (La Ola 4 dejó de ser la última visual: la dirección "feel Duolingo" abrió Olas 5-8.)
 
 ## Estado anterior: Fase 4 Ola 4 — cohesión fina (última ola de `direccion-visual.md`). Tres piezas, sin rediseñar pantallas: (A) respiración idle MUY sutil del sprite en reposo normal (keyframe `idle-breathe` scale 1->1.015, 4s; prop `idle` del Sprite; el suspiro triste del at-risk tiene prioridad, nunca conviven; aplicada en Home y Perfil); (B) bocadillo reactivo unificado (`ReactiveBubble.tsx`: caja rounded-card + surface-soft, personaje italic, Cupido en --color-love prefijado "Cupido:"; reemplaza el markup repetido en Perfil y MissionResultScreen, mismo contenido de reactionFor); (C) barrido de cohesión a tokens (AbandonmentScene migrada manteniendo fondo oscuro sobrio; CTAs primarios sueltos -> rounded-cta + bg-primary + shadow-cta; corazón ya era --color-love). prefers-reduced-motion colapsa el idle. Sin tests nuevos (piezas visuales); se conservan los 172 tests de la Ola 3. NO se tocó git. Siguiente: verificación manual del Director en navegador (respiración idle sutil que NO choque con at-risk/celebración; bocadillo unificado idéntico en Perfil y resultado; AbandonmentScene migrada).
 
@@ -165,6 +167,68 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 6 feel Duolingo — Cupido mascota al frente + confeti de hito
+- Ola 6 del "feel Duolingo" (fuente: `equipo/fase4/direccion-feel-duolingo.md` P4 de §1, fila
+  "Entrada de Cupido" de §3, todo §5, "Ola 6" de §6). SOLO Cupido-Duo + confeti de hito. NO se
+  hizo el spring de la hearts bar, ni el stagger del Home, ni AnimatePresence (Olas 7-8). Deps ya
+  instaladas por el Director (`motion`, `canvas-confetti`): no se instaló nada. NO se tocó la
+  lógica de las escenas ni la economía del juego. **172 tests verdes, lint y build limpios.** NO git.
+- **A. Cupido como Duo (`src/ui/components/CupidoMascot.tsx` NUEVO):** wrapper de `<Cupido>` con
+  `motion.div`. En CELEBRACIÓN (`tone="celebration"`, default): entrada spring `stiffness 400,
+  damping 16` (overshoot visible, "salta al frente") + bob idle `y:[0,-4,0]` loop ~2s easeInOut
+  (arranca con delay 0.4s para no chocar con la entrada). En PÉRDIDA (`tone="loss"`): entrada lenta
+  `easeIn` 0.6s SIN overshoot, SIN bob idle (queda quieto). `useReducedMotion()` de motion/react:
+  con reduced-motion el sprite aparece quieto, sin spring ni bob (camino aparte que ni monta el
+  `motion.div` animado).
+- **Montaje:** (1) **MissionResultScreen** — cuadro de hito grande (PresenterDialog): Cupido pose
+  'corazon' arriba de su línea. Bocadillo de celebración R3: si `celebration.cupidoLine` no es null,
+  Cupido pose 'celebrar' entra sobre el `ReactiveBubble` (que sigue mostrando la línea). (2)
+  **LevelScene** — Cupido pose 'celebrar' al frente celebrando el nivel y la boda, encima del
+  HeartBurst CSS, debajo del título/narrativa. (3) **AbandonmentScene** — Cupido pose 'serena',
+  `tone="loss"`, `opacity-90`: consuelo digno, sin festejo.
+- **B. Confeti de hito (`src/ui/confetti.ts` NUEVO):** envuelve `canvas-confetti` con
+  `disableForReducedMotion: true` en CADA llamada (canvas-confetti corta el confeti nativo bajo
+  reduced-motion). Hexes literales de los tokens (love `#e11d80`, primary `#ec4899`, milestone
+  `#f59e0b`, blanco). `confettiLevelUp()`: subir de nivel (NO boda), confeti MEDIO — 80 partículas,
+  spread 70, origin centro-arriba (x:0.5,y:0.35), love+primary+blanco, UNA descarga. Boda: confeti
+  MÁXIMO — DOS descargas escalonadas (0ms y +250ms) desde ambos lados (x:0.2 ángulo 60 / x:0.8
+  ángulo 120), ~120 partículas c/u, milestone+love+blanco. `scheduleMilestoneConfetti(wedding)`
+  programa el disparo tras `CONFETTI_DELAY_MS=200` (DESPUÉS del pop del sprite, no en el mismo frame)
+  y devuelve un cleanup que limpia los timers. LevelScene lo llama en un `useEffect([wedding])` con
+  el cleanup como return (timers cancelados al desmontar). El confeti va ENCIMA del heart-burst CSS
+  (no lo quita); canvas-confetti monta su propio canvas fixed full-screen (z alto) que no bloquea el
+  CTA "Continuar" (pointer-events none por defecto del lib).
+- **Completar misión normal:** SIN confeti pleno (se reserva a hitos para no devaluarlo); el juice
+  existente (float-heart + pop + conteo) basta. La **PÉRDIDA** (CancellationScene, AbandonmentScene):
+  CERO confeti, cero partículas festivas — `confetti.ts` solo se importa desde celebraciones (80/20
+  inviolable).
+- **Decisión clave — Cupido en AbandonmentScene sin romper el 80/20:** se metió pero SOBRIO con el
+  `tone="loss"` del propio CupidoMascot, que es el guardarraíl: entrada `easeIn` lenta sin el spring
+  de overshoot, SIN bob idle, pose 'serena', tamaño chico (72) y `opacity-90`. Nunca festivo. El bob
+  y el spring de celebración son inalcanzables desde ese tone (rama distinta de `transition`/
+  `animate`). Cero confeti en esa pantalla (no importa `confetti.ts`). Es el consuelo digno que pide
+  la dirección, no celebración.
+- **Otras decisiones donde el doc dejaba margen:** (1) en el bocadillo R3 el sprite de Cupido solo
+  entra si HAY `cupidoLine` (si la celebración no trae línea de Cupido, solo el bocadillo del
+  personaje, sin mascota suelta). (2) El delay del confeti (200ms) y el escalón de boda (250ms) viven
+  como constantes exportadas en `confetti.ts`. (3) El z-index/pointer del canvas se deja al default
+  de canvas-confetti (canvas fixed, pointer-events:none): cumple "encima de la escena sin bloquear el
+  CTA" sin tocar el DOM de las escenas. (4) Tamaños de Cupido afinados por contexto (84 en el cuadro
+  de hito, 88-96 en celebración, 72 sobrio en pérdida) para no romper el layout existente.
+- **Tests:** sin tests nuevos (las dos piezas son presentación/motion + efecto de canvas; no hay
+  lógica pura nueva). Se conservan los 172 de la Ola 5. `npm run lint`, `npm run build` (tsc+vite) y
+  `npm run test` corridos localmente: todo limpio.
+- **Revisar en navegador (verificación del Director):** (1) **Cupido entrando + bob** en celebración:
+  completar misiones hasta disparar una celebración R3 (o cruzar un hito grande) y subir de nivel —
+  el sprite de Cupido debe SALTAR al frente con overshoot y luego hacer un bob suave arriba/abajo
+  mientras está presente; (2) **confeti medio al subir de nivel** (~80 partículas rosa/love/blanco,
+  una descarga, ~200ms después del pop), **doble en boda** (nivel 3: dos ráfagas desde ambos lados
+  con amber mezclado); (3) **CERO confeti en pérdida** (dejar vencer/cancelar una misión → escena de
+  cancelación; 21+ días → abandono): nada de partículas, y Cupido en abandono entra LENTO y QUIETO
+  (sin bob, sin overshoot), pose serena; (4) **prefers-reduced-motion** activado: Cupido aparece
+  quieto (sin spring ni bob) y canvas-confetti NO dispara (disableForReducedMotion). Nota: el arte de
+  Cupido sigue siendo el placeholder (recuadro con emoji por pose); el spring/bob corre sobre él.
 
 ### 2026-06-14: Fase 4 Ola 5 feel Duolingo — botón 3D + tipografía Baloo 2
 - Ola 5 del "feel Duolingo" = la FIRMA (fuente: `equipo/fase4/direccion-feel-duolingo.md` §2 botón,

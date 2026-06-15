@@ -27,6 +27,7 @@ import {
 } from '../../game/reaction';
 import { PresenterDialog } from '../components/PresenterDialog';
 import { ReactiveBubble } from '../components/ReactiveBubble';
+import { CupidoMascot } from '../components/CupidoMascot';
 import { Button } from '../components/Button';
 import { Sprite } from '../components/Sprite';
 import { HeartsBar } from '../components/HeartsBar';
@@ -104,6 +105,9 @@ export function MissionResultScreen({
     // (acknowledgeMilestone) y se cierra. (advance hace ambos.)
     return (
       <PresenterDialog pose="corazon" cta="Continuar" onAdvance={advance}>
+        {/* Ola 6 (P4): Cupido al frente como Duo, su sprite reacciona (pose 'corazon',
+            celebrando con spring + bob) sobre su línea de hito. */}
+        <CupidoMascot pose="corazon" size={84} className="mx-auto mb-3" />
         <span className="block font-semibold text-pink-600">{milestone.cupidoLine}</span>
         <span className="mt-2 block italic text-stone-700">“{milestone.line}”</span>
       </PresenterDialog>
@@ -139,14 +143,20 @@ export function MissionResultScreen({
         </div>
       )}
 
-      {/* R3: línea extra de celebración del personaje (sin tocar corazones). Presentación
-          unificada en ReactiveBubble (§2 principio 5): mismo bocadillo que el Perfil. */}
+      {/* R3: celebración del personaje. Ola 6 (P4): cuando Cupido tiene línea, su SPRITE entra
+          al frente como Duo (pose 'celebrar', spring + bob idle) sobre el bocadillo, que sigue
+          con su carita reaccionando. Sin línea de Cupido, solo el bocadillo del personaje. */}
       {celebration && (
-        <ReactiveBubble
-          characterLine={celebration.characterLine}
-          cupidoLine={celebration.cupidoLine}
-          className="mt-4 w-full max-w-sm"
-        />
+        <>
+          {celebration.cupidoLine && (
+            <CupidoMascot pose="celebrar" size={88} className="mt-5" />
+          )}
+          <ReactiveBubble
+            characterLine={celebration.characterLine}
+            cupidoLine={celebration.cupidoLine}
+            className="mt-3 w-full max-w-sm"
+          />
+        </>
       )}
 
       {/* A1: hito menor como pill ligera SOLO si coexiste con algo que se lee (celebración):
