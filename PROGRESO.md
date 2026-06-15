@@ -1,6 +1,8 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 4 Ola 3 — el clímax del 80% (la celebración mayor). LevelScene cinematográfica (fade-in del fondo + imagen con entrada scale 1.04->1 + título display con pop+glow + burst radial de ~14 corazones desde el centro), variante BODA amplificada en la MISMA pantalla (~21 partículas con 💍/💕, título amber, glow que pulsa 2 veces), y nacimiento de personaje (la card aterriza scale 0.85->1 + latido del sprite al aparecer en el Home, una sola vez). prefers-reduced-motion colapsa a fade simple (sin burst). NO se tocó at-risk/penalización (Olas 1-2) ni la AbandonmentScene. 172 tests verdes (167 + 5 de makeBurst), lint y build limpios. Siguiente: verificación manual del Director en navegador (subir de nivel normal, boda amplificada, crear personaje con su aterrizaje, prefers-reduced-motion)
+## Estado actual: Fase 4 Ola 4 — cohesión fina (ÚLTIMA ola visual). Tres piezas, sin rediseñar pantallas: (A) respiración idle MUY sutil del sprite en reposo normal (keyframe `idle-breathe` scale 1->1.015, 4s; prop `idle` del Sprite; el suspiro triste del at-risk tiene prioridad, nunca conviven; aplicada en Home y Perfil); (B) bocadillo reactivo unificado (`ReactiveBubble.tsx`: caja rounded-card + surface-soft, personaje italic, Cupido en --color-love prefijado "Cupido:"; reemplaza el markup repetido en Perfil y MissionResultScreen, mismo contenido de reactionFor); (C) barrido de cohesión a tokens (AbandonmentScene migrada manteniendo fondo oscuro sobrio; CTAs primarios sueltos -> rounded-cta + bg-primary + shadow-cta; corazón ya era --color-love). prefers-reduced-motion colapsa el idle. Sin tests nuevos (piezas visuales); se conservan los 172 tests de la Ola 3. NO se tocó git. Siguiente: verificación manual del Director en navegador (respiración idle sutil que NO choque con at-risk/celebración; bocadillo unificado idéntico en Perfil y resultado; AbandonmentScene migrada).
+
+## Estado anterior: Fase 4 Ola 3 — el clímax del 80% (la celebración mayor). LevelScene cinematográfica (fade-in del fondo + imagen con entrada scale 1.04->1 + título display con pop+glow + burst radial de ~14 corazones desde el centro), variante BODA amplificada en la MISMA pantalla (~21 partículas con 💍/💕, título amber, glow que pulsa 2 veces), y nacimiento de personaje (la card aterriza scale 0.85->1 + latido del sprite al aparecer en el Home, una sola vez). prefers-reduced-motion colapsa a fade simple (sin burst). NO se tocó at-risk/penalización (Olas 1-2) ni la AbandonmentScene. 172 tests verdes (167 + 5 de makeBurst), lint y build limpios.
 
 **Motor de reactividad (2026-06-14, decisión P8-a; spec del vault en
 `projects/habit-dating-sim/equipo/mecanicas/motor-reactividad-spec.md`):** construidas las tres
@@ -161,6 +163,55 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 4 — cohesión fina: idle breathe, bocadillo unificado, barrido de tokens
+- Última ola visual (fuente: `equipo/fase4/direccion-visual.md` §6 "Ola 4" + §2 principios 3 y 5).
+  Cohesión fina, sin rediseñar pantallas. NO se tocó la economía de corazones, niveles ni el reloj
+  de 21 días. CSS puro, sin dependencias nuevas. NO se tocó git.
+- **A. Respiración idle del sprite (`src/index.css` + `Sprite.tsx`):** keyframe nuevo `idle-breathe`
+  (scale 1->1.015->1, 4s loop, muy sutil) + clase `.animate-idle-breathe`. El `Sprite` ganó una prop
+  `idle` opcional: en reposo NORMAL el sprite "respira" para dar vida sin distraer. El suspiro triste
+  del at-risk (`sigh`) tiene PRIORIDAD: nunca corren juntos (en el componente, `sigh ? animate-sigh :
+  idle ? animate-idle-breathe : ''`). Aplicado en Home (`idle={!atRisk && !born}` — no respira si está
+  en riesgo ni si el happy-pop del nacimiento está corriendo) y en Perfil (`idle={!atRisk}`). El guard
+  global de prefers-reduced-motion lo colapsa a 1ms.
+- **B. Bocadillo reactivo unificado (`src/ui/components/ReactiveBubble.tsx`):** componente nuevo que
+  estandariza el bocadillo del §2 principio 5: caja `rounded-card` + `bg-surface-soft` + borde
+  `border-border`, texto del personaje italic body en `text-ink`, línea de Cupido en `text-love`
+  text-xs prefijada "Cupido:". Reemplaza el markup repetido en `ProfileScreen` (R2 idle) y
+  `MissionResultScreen` (celebración R3). El contenido NO cambia (sigue saliendo de `reactionFor`);
+  solo se unifica la presentación (antes Perfil usaba `bg-pink-50/70`+`text-stone-700`+Cupido
+  `text-pink-500`, y Result `border-2`+`bg-surface`; ahora ambos son el MISMO bocadillo).
+- **C. Barrido de cohesión a tokens:** (1) **AbandonmentScene migrada a tokens** manteniendo su fondo
+  oscuro (es pérdida: sobria, sin fiesta): `bg-stone-950`->`bg-scene-abandon`, `rounded-xl`->`rounded-
+  card`/`rounded-cta`, el aviso de "bajó de nivel" `text-orange-400`->`text-risk` (naranja =
+  melancolía, no rojo de error). (2) **CTAs primarios unificados** al patrón del token: Profile "Crear
+  nueva misión", Create Character "Crear personaje" y Create Mission "Confirmar misión" pasaron de
+  `rounded-xl bg-pink-500 hover:bg-pink-600` (sin sombra) a `rounded-cta bg-primary hover:bg-primary-
+  press shadow-cta` (CTA primario SIEMPRE rosa con --shadow-cta, doc §1); el "+ misión" de la card del
+  Home a `rounded-card bg-primary` (acción de card, radio de card). El corazón ya era `--color-love`
+  en HeartsBar/MissionResultScreen desde Olas 1-2 (sin cambio).
+- **Decisiones donde el doc no especificaba:** (1) la respiración idle se hizo como prop `idle` del
+  `Sprite` (no un wrapper) y el componente garantiza que `sigh` gana sobre `idle` para que nunca
+  convivan tristeza y respiración; en Home además se excluye el caso `born` (el happy-pop del wrapper
+  ya anima el sprite). (2) `idle-breathe` usa `scale` (no `translateY`) — más orgánico de "respirar" y
+  no compite con el `translateY` del `sigh`. (3) El `riskLine` corto del Home se dejó como `<p>`
+  italic sin caja (NO se convirtió a ReactiveBubble): es la variante corta de una línea del §5 (sin
+  Cupido en el Home), y meterlo en la caja del bocadillo habría sido un rediseño de la card. (4) El
+  barrido de tokens se limitó a lo nombrado (CTAs primarios sueltos, AbandonmentScene, corazón) — NO
+  se repintaron inputs, selectores de dificultad, headers/footers ni onboarding, para no derivar a un
+  rediseño (el doc pide "solo llevar a tokens lo que quedó disperso"). (5) Los CTAs deshabilitados
+  pierden la `shadow-cta` (`disabled:shadow-none`) para que el estado off no "flote".
+- **Tests:** sin tests nuevos (las tres piezas son visuales/de presentación; no hay lógica pura nueva).
+  Se conserva el conteo de la Ola 3.
+- **Revisar en navegador (verificación del Director):** (1) **respiración idle** en Home y Perfil: un
+  personaje en reposo normal "respira" muy lento y sutil (NO debe notarse como movimiento brusco); (2)
+  que NO choque con at-risk (un personaje en riesgo SUSPIRA, no respira) ni con la celebración/
+  nacimiento (un recién nacido hace su happy-pop, no respira); (3) el **bocadillo unificado**: la línea
+  del personaje + Cupido se ve IGUAL en el Perfil (idle) y en la pantalla de resultado al completar
+  (celebración) — misma caja rosa pálido, mismo estilo; (4) la **AbandonmentScene** migrada: fondo aún
+  oscuro/sobrio, el aviso de "bajó de nivel" en naranja (no naranja viejo), botones con radio de token;
+  (5) **prefers-reduced-motion** activado: la respiración idle colapsa (sprite quieto).
 
 ### 2026-06-14: Fase 4 Ola 3 — nivel/boda cinematográficos + nacimiento de personaje
 - Ola 3 del pulido visual = el clímax del 80% (la celebración mayor). Fuente: `equipo/fase4/

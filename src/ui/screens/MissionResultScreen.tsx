@@ -26,6 +26,7 @@ import {
   type MilestoneReaction,
 } from '../../game/reaction';
 import { PresenterDialog } from '../components/PresenterDialog';
+import { ReactiveBubble } from '../components/ReactiveBubble';
 import { Sprite } from '../components/Sprite';
 import { HeartsBar } from '../components/HeartsBar';
 import { FloatingHearts } from '../components/FloatingHearts';
@@ -137,16 +138,14 @@ export function MissionResultScreen({
         </div>
       )}
 
-      {/* R3: línea extra de celebración del personaje (sin tocar corazones). */}
+      {/* R3: línea extra de celebración del personaje (sin tocar corazones). Presentación
+          unificada en ReactiveBubble (§2 principio 5): mismo bocadillo que el Perfil. */}
       {celebration && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border-2 border-border bg-surface px-4 py-3">
-          <p className="text-sm italic leading-relaxed text-ink">
-            “{celebration.characterLine}”
-          </p>
-          {celebration.cupidoLine && (
-            <p className="mt-1 text-xs text-love">Cupido: {celebration.cupidoLine}</p>
-          )}
-        </div>
+        <ReactiveBubble
+          characterLine={celebration.characterLine}
+          cupidoLine={celebration.cupidoLine}
+          className="mt-4 w-full max-w-sm"
+        />
       )}
 
       {/* A1: hito menor como pill ligera SOLO si coexiste con algo que se lee (celebración):

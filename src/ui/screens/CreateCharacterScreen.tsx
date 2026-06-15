@@ -56,7 +56,7 @@ export function CreateCharacterScreen({
         <button
           onClick={() => valid && onConfirm(name.trim())}
           disabled={!valid}
-          className="mt-6 w-full rounded-xl bg-pink-500 px-4 py-3 font-bold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:bg-stone-300"
+          className="mt-6 w-full rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
         >
           Crear personaje
         </button>
