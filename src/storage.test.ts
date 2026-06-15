@@ -37,6 +37,7 @@ function sampleState(): GameState {
     inactivitySince: '2026-06-10',
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
+    milestonesShown: [],
   });
   state.missions.push({
     id: 'mission-1',
@@ -284,5 +285,54 @@ describe('onboarded — campo nuevo y migración suave', () => {
     const empty = createEmptyState();
     const result = importStateJson(exportStateJson(empty));
     expect(result).toEqual({ ok: true, state: empty });
+  });
+});
+
+// A1 (motor de reactividad, P8-a): campo milestonesShown con migración suave per-character
+// (sin subir SCHEMA_VERSION), exactamente como onboarded. Ausente en respaldos viejos = [].
+describe('milestonesShown — campo nuevo y migración suave (A1 / P8-a)', () => {
+  it('un respaldo viejo SIN milestonesShown se carga con [] por personaje (no rechaza, C1)', () => {
+    const storage = memoryStorage();
+    const legacy = sampleState();
+    const character = { ...legacy.characters[0] } as Record<string, unknown>;
+    delete character.milestonesShown; // respaldo anterior a esta feature
+    storage.setItem(STORAGE_KEY, JSON.stringify({ ...legacy, characters: [character] }));
+    const loaded = loadState(storage);
+    expect(loaded.characters[0].milestonesShown).toEqual([]);
+  });
+
+  it('importStateJson de un respaldo viejo SIN milestonesShown lo normaliza a []', () => {
+    const legacy = sampleState();
+    const character = { ...legacy.characters[0] } as Record<string, unknown>;
+    delete character.milestonesShown;
+    const result = importStateJson(JSON.stringify({ ...legacy, characters: [character] }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.state.characters[0].milestonesShown).toEqual([]);
+  });
+
+  it('conserva los ids ya mostrados cuando el campo existe', () => {
+    const storage = memoryStorage();
+    const state = sampleState();
+    state.characters[0].milestonesShown = ['week1', 'day30'];
+    saveState(state, storage);
+    expect(loadState(storage).characters[0].milestonesShown).toEqual(['week1', 'day30']);
+  });
+
+  it('rechaza un respaldo con milestonesShown de tipo inválido (coherente con C1)', () => {
+    const state = sampleState();
+    const character = { ...state.characters[0], milestonesShown: 'week1' };
+    expect(importStateJson(JSON.stringify({ ...state, characters: [character] }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un respaldo con milestonesShown que contiene un no-string (coherente con C1)', () => {
+    const state = sampleState();
+    const character = { ...state.characters[0], milestonesShown: ['week1', 7] };
+    expect(importStateJson(JSON.stringify({ ...state, characters: [character] }))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
   });
 });

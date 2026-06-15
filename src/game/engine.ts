@@ -128,6 +128,7 @@ export function createCharacter(state: GameState, name: string, today: string): 
     inactivitySince: today,
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
+    milestonesShown: [],
   };
   return { ok: true, state: { ...state, characters: [...state.characters, character] }, character };
 }
@@ -351,6 +352,22 @@ export function acknowledgeAbandonmentScene(state: GameState, characterId: strin
 
 export function acknowledgeCancellationScene(state: GameState, characterId: string): GameState {
   return patchCharacter(state, characterId, { pendingCancellationScene: false });
+}
+
+// A1 (motor de reactividad, P8-a): marca un hito como mostrado para que no vuelva a aparecer.
+// Idempotente — si el id ya está en milestonesShown, no cambia nada. Es el único efecto
+// secundario de estado del motor (reactionFor no muta: solo reporta el hito pendiente).
+// Mismo estilo que acknowledge*Scene.
+export function acknowledgeMilestone(
+  state: GameState,
+  characterId: string,
+  milestoneId: string,
+): GameState {
+  const character = getCharacter(state, characterId);
+  if (!character || character.milestonesShown.includes(milestoneId)) return state;
+  return patchCharacter(state, characterId, {
+    milestonesShown: [...character.milestonesShown, milestoneId],
+  });
 }
 
 export interface AbandonmentEvent {

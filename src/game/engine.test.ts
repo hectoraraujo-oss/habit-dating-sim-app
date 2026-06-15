@@ -33,6 +33,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     inactivitySince: lastMissionCompletedDate ?? createdDate,
     pendingAbandonmentScene: false,
     pendingCancellationScene: false,
+    milestonesShown: [],
     ...overrides,
   };
 }

@@ -12,12 +12,14 @@ import {
   acceptMissionLoss,
   acknowledgeAbandonmentScene,
   acknowledgeCancellationScene,
+  acknowledgeMilestone,
   cancelMission,
   completeMission,
   createCharacter,
   createMission,
   deleteCharacter,
 } from './game/engine';
+import { reactionFor, type Celebration, type MilestoneReaction } from './game/reaction';
 import { buildStartup, type StartupScene } from './game/startup';
 import { loadState, saveState } from './storage';
 import { StartScreen } from './ui/screens/StartScreen';
@@ -31,6 +33,7 @@ import { LevelScene } from './ui/screens/LevelScene';
 import { AbandonmentScene } from './ui/screens/AbandonmentScene';
 import { CancellationScene } from './ui/screens/CancellationScene';
 import { DataScreen } from './ui/screens/DataScreen';
+import { MissionResultScreen } from './ui/screens/MissionResultScreen';
 
 type Screen =
   | { name: 'home' }
@@ -39,6 +42,13 @@ type Screen =
   | { name: 'create-mission'; characterId: string; from: Screen }
   | { name: 'complete-mission'; missionId: string; from: Screen }
   | { name: 'level-scene'; characterId: string; newLevel: Level; wedding: boolean }
+  | {
+      name: 'mission-result';
+      characterId: string;
+      heartsEarned: number;
+      celebration: Celebration | null;
+      milestone: MilestoneReaction | null;
+    }
   | { name: 'cancellation-scene'; characterId: string; missionId: string; auto: boolean }
   | { name: 'data' };
 
@@ -159,6 +169,9 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
     }
     const mission = result.state.missions.find((m) => m.id === missionId);
     setState(result.state);
+
+    // Subida de nivel: la LevelScene es su propia celebración inmersiva (no se mezcla con
+    // R3/A1 para no saturar — un solo Cupido por evento, P7-b).
     if (result.leveledUp && mission) {
       setScreen({
         name: 'level-scene',
@@ -166,10 +179,59 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
         newLevel: result.newLevel,
         wedding: result.wedding,
       });
-    } else {
-      setScreen({ name: 'home' });
-      setToast(`¡Misión completada! +${result.heartsEarned} 💕`);
+      return;
     }
+
+    // Motor de reactividad (P8-a): sobre el estado YA actualizado, evalúa R3 (celebración
+    // de frecuencia) y A1 (hito pendiente). Si hay algo que mostrar, va a la pantalla de
+    // resultado (+💕 → celebración del personaje → cuadro de Cupido del hito). Si no, el
+    // toast de siempre.
+    const character = mission ? result.state.characters.find((c) => c.id === mission.characterId) : undefined;
+    if (mission && character) {
+      const reaction = reactionFor(character, result.state.missions, today, {
+        evaluateCelebration: true,
+        variantIndex: result.state.missions.length,
+      });
+      if (reaction.celebration || reaction.milestone) {
+        setScreen({
+          name: 'mission-result',
+          characterId: character.id,
+          heartsEarned: result.heartsEarned,
+          celebration: reaction.celebration,
+          milestone: reaction.milestone,
+        });
+        return;
+      }
+    }
+
+    setScreen({ name: 'home' });
+    setToast(`¡Misión completada! +${result.heartsEarned} 💕`);
+  }
+
+  // A1: persistir un hito como mostrado (idempotente) para que no se repita.
+  function handleAcknowledgeMilestone(characterId: string, milestoneId: string) {
+    setState((prev) => acknowledgeMilestone(prev, characterId, milestoneId));
+  }
+
+  // Abrir el Perfil (spec §5: el hito también se evalúa al abrir el Perfil, por si se cruzó
+  // por el paso del tiempo, ej. día 30 sin haber cumplido ese día). Si hay un hito pendiente,
+  // se muestra primero como resultado (sin +💕 ni celebración: no hubo misión); luego el Perfil.
+  function handleOpenProfile(characterId: string) {
+    const character = findCharacter(characterId);
+    if (character) {
+      const reaction = reactionFor(character, state.missions, today);
+      if (reaction.milestone) {
+        setScreen({
+          name: 'mission-result',
+          characterId,
+          heartsEarned: 0,
+          celebration: null,
+          milestone: reaction.milestone,
+        });
+        return;
+      }
+    }
+    setScreen({ name: 'profile', characterId });
   }
 
   function handleDeleteCharacter(characterId: string) {
@@ -266,7 +328,7 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
           <HomeScreen
             state={state}
             today={today}
-            onOpenProfile={(characterId) => setScreen({ name: 'profile', characterId })}
+            onOpenProfile={handleOpenProfile}
             onCreateCharacter={() => setScreen({ name: 'create-character' })}
             onCreateMission={(characterId) =>
               setScreen({ name: 'create-mission', characterId, from: { name: 'home' } })
@@ -371,6 +433,25 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
           onBack={() => setScreen({ name: 'home' })}
         />
       );
+
+    case 'mission-result': {
+      const character = findCharacter(screen.characterId);
+      if (!character) {
+        return null;
+      }
+      return (
+        <MissionResultScreen
+          character={character}
+          heartsEarned={screen.heartsEarned}
+          celebration={screen.celebration}
+          milestone={screen.milestone}
+          onAcknowledgeMilestone={(milestoneId) =>
+            handleAcknowledgeMilestone(character.id, milestoneId)
+          }
+          onContinue={() => setScreen({ name: 'profile', characterId: character.id })}
+        />
+      );
+    }
 
     case 'cancellation-scene': {
       const character = findCharacter(screen.characterId);

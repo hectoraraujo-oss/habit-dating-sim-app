@@ -31,7 +31,16 @@ export function createEmptyState(): GameState {
 // re-onboardea. Se aplica en la frontera de lectura (loadState / importStateJson), DESPUÉS
 // de validar, para no acoplar isValidState (y su contrato C1) a este campo.
 function normalizeLoaded(state: GameState): GameState {
-  return { ...state, onboarded: state.onboarded === false ? false : true };
+  return {
+    ...state,
+    onboarded: state.onboarded === false ? false : true,
+    // A1 (motor de reactividad, P8-a): respaldos viejos no tienen milestonesShown. Se
+    // inyecta [] al leer, igual que onboarded — sin subir SCHEMA_VERSION. Si el campo ya
+    // viene como array (de strings, garantizado por isValidCharacter) se conserva tal cual.
+    characters: state.characters.map((c) =>
+      Array.isArray(c.milestonesShown) ? c : { ...c, milestonesShown: [] },
+    ),
+  };
 }
 
 // --- Validación profunda (QA C1) ---
@@ -83,8 +92,18 @@ function isValidCharacter(value: unknown): value is Character {
     (value.lastMissionCompletedDate === null || isIsoDate(value.lastMissionCompletedDate)) &&
     isIsoDate(value.inactivitySince) &&
     typeof value.pendingAbandonmentScene === 'boolean' &&
-    typeof value.pendingCancellationScene === 'boolean'
+    typeof value.pendingCancellationScene === 'boolean' &&
+    // A1 (P8-a): milestonesShown es opcional para no rechazar respaldos viejos (igual que
+    // onboarded: la migración suave lo inyecta al leer). PERO si está presente debe ser un
+    // array de strings; un tipo inválido SÍ rechaza el respaldo (coherente con C1).
+    isMilestonesShown(value.milestonesShown)
   );
+}
+
+// Ausente (respaldo viejo) = válido; presente debe ser string[]. Cualquier otra cosa rechaza.
+function isMilestonesShown(value: unknown): boolean {
+  if (value === undefined) return true;
+  return Array.isArray(value) && value.every((v) => typeof v === 'string');
 }
 
 function isValidMission(value: unknown): value is Mission {
