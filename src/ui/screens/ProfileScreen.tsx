@@ -1,8 +1,9 @@
 // Pantalla 2: Perfil de personaje — detalle, estadísticas e historial (flujo-pantallas.md).
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Character, GameState, Mission } from '../../types';
 import { completedMissionsCount, daysTogether } from '../../game/engine';
+import { reactionFor } from '../../game/reaction';
 import { DIFFICULTY_LABEL, formatDeadline, LEVEL_STAGE } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
 import { Sprite } from '../components/Sprite';
@@ -27,6 +28,12 @@ export function ProfileScreen({
   onDeleteCharacter,
 }: ProfileScreenProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // R2 idle: el Perfil es el hogar principal de la línea reactiva (spec §5). Una variante
+  // estable por apertura (rota por día para no repetir la misma frase siempre).
+  const reaction = useMemo(() => {
+    const variantIndex = daysTogether(character, today);
+    return reactionFor(character, state.missions, today, { variantIndex });
+  }, [character, state.missions, today]);
   const missions = state.missions.filter((m) => m.characterId === character.id);
   const pending = missions
     .filter((m) => m.status === 'pending')
@@ -47,7 +54,7 @@ export function ProfileScreen({
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-5">
         <section className="flex flex-col items-center gap-2 rounded-xl border-2 border-pink-200 bg-white p-6">
-          <Sprite character={character} size={128} />
+          <Sprite character={character} size={128} sad={reaction.sprite === 'sad'} />
           <h1 className="text-xl font-bold text-stone-800">{character.name}</h1>
           <p className="text-sm text-stone-500">
             Nivel {character.level} — {LEVEL_STAGE[character.level]}
@@ -58,6 +65,14 @@ export function ProfileScreen({
           <p className="text-xs text-stone-400">
             Juntos desde {character.createdDate} · {daysTogether(character, today)} días juntos
           </p>
+
+          {/* R2 idle: línea reactiva del personaje (2da persona) + marco opcional de Cupido. */}
+          <div className="mt-2 w-full max-w-sm rounded-xl border border-pink-200 bg-pink-50/70 px-4 py-3">
+            <p className="text-sm italic leading-relaxed text-stone-700">“{reaction.characterLine}”</p>
+            {reaction.cupidoLine && (
+              <p className="mt-1 text-xs text-pink-500">Cupido: {reaction.cupidoLine}</p>
+            )}
+          </div>
         </section>
 
         <section className="mt-3 grid grid-cols-3 gap-2 text-center">

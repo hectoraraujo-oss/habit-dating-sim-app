@@ -29,6 +29,11 @@ export interface Character {
   inactivitySince: string;
   pendingAbandonmentScene: boolean;
   pendingCancellationScene: boolean;
+  // A1 (motor de reactividad, P8-a): ids de hitos ya mostrados ('week1' | 'missions10' |
+  // 'day30' | 'firstHard' | 'day66'). Es la ÚNICA memoria persistente del motor: el resto
+  // es capa de lectura. Default []. Migración suave en storage.ts (respaldos viejos sin el
+  // campo se normalizan a [], igual que onboarded) — NO sube SCHEMA_VERSION.
+  milestonesShown: string[];
 }
 
 export interface Mission {

@@ -1,6 +1,17 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Onboarding con Cupido (Bloques 1-3) listo — siguiente: arte real de Cupido (P2) + Bloque 4 (recap de regreso)
+## Estado actual: Motor de reactividad (R2+R3+A1) construido — siguiente: revisión del Director (sobre todo milestonesShown vs C1) + arte real de Cupido (P2) + Bloque 4 (recap de regreso)
+
+**Motor de reactividad (2026-06-14, decisión P8-a; spec del vault en
+`projects/habit-dating-sim/equipo/mecanicas/motor-reactividad-spec.md`):** construidas las tres
+mecánicas como UNA pieza (R2 diálogo reactivo, R3 celebración de frecuencia, A1 hitos). Es CAPA
+DE LECTURA: NO toca corazones, niveles ni el reloj de 21 días. La única memoria persistente es
+el array `milestonesShown` de A1. Motor puro y determinista (`reactionFor`, la variante se
+inyecta por `opts`, sin `Math.random`), copy en módulo aparte (`reactionCopy.ts`, texto exacto
+de las tablas del spec), surfacing sobre las pantallas existentes (Perfil, Home, resultado de
+completar). **147 tests en verde** (114 + 33 nuevos), lint y build limpios. NO se tocó git.
+
+## Estado anterior: Onboarding con Cupido (Bloques 1-3) listo
 
 **Onboarding con presentador "Cupido" (2026-06-13, spec/guion del vault en
 `projects/habit-dating-sim/equipo/onboarding/`):** MVP de los Bloques 1-3 construido. La app
@@ -150,6 +161,45 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14 — Motor de reactividad (R2+R3+A1)
+- Construido el motor de reactividad aprobado en P8-a (spec del vault como fuente de verdad).
+  Decisión del Director respetada: R3 (celebración de frecuencia) es SOLO texto + expresión,
+  NO toca corazones. El motor no toca corazones, niveles ni el reloj de 21 días: capa de lectura.
+  Única excepción de estado: el array `milestonesShown` de A1.
+- **Motor puro** (`src/game/reaction.ts`): `reactionFor(character, missions, today, opts?)`
+  determinista. Separa derivación de señales (`deriveSignals`, sección 1 del spec) de la
+  selección (`selectState`, prioridad exacta: overdueDebt > atRisk > cameBack > nearLevelUp >
+  firstDone > brandNew > firstHardDone > goodStreak > default). Variantes inyectadas por
+  `opts.variantIndex` (sin Math.random). `cameBackAfterGap` se deriva del HUECO entre las dos
+  últimas completedDate (no de inactivitySince, que se reinicia al completar — nota del spec).
+- **Copy** (`src/game/reactionCopy.ts`): tablas de R2/R3/A1 con el texto EXACTO del spec,
+  separadas de la lógica (agregar frases no toca el motor).
+- **Modelo de datos (A1):** campo `milestonesShown: string[]` en `Character` (default []).
+  `createCharacter` lo inicializa. `normalizeLoaded` (storage.ts) lo inyecta a respaldos viejos
+  per-character, igual que `onboarded`, SIN subir SCHEMA_VERSION. `isValidCharacter` acepta el
+  campo ausente (no rechaza respaldos viejos) pero SÍ rechaza si está presente con tipo inválido
+  (coherente con C1). `acknowledgeMilestone(state, characterId, milestoneId)` en engine.ts
+  (idempotente, estilo acknowledge*Scene).
+- **Surfacing (sin rediseñar pantallas):** R2 idle en la cabecera del Perfil (línea del personaje
+  + Cupido) y versión corta de una línea en el Home SOLO para el personaje en riesgo (Cupido no
+  en el Home). R3 + A1 en una pantalla de resultado al completar (`MissionResultScreen`): +💕 →
+  celebración del personaje → cuadro de Cupido (hito grande, reusa PresenterDialog) o toast ligero
+  (hito menor). El hito también se evalúa al abrir el Perfil (por si se cruzó por el paso del
+  tiempo). Convivencia P7-b respetada: un solo Cupido por evento; la subida de nivel mantiene su
+  LevelScene sola (no se mezcla con R3/A1).
+- **Tests:** un fixture por estado R2, por disparador R3, por hito A1 (incluyendo "ya mostrado ->
+  no repite"), prioridad (overdueDebt gana sobre atRisk), variante determinista,
+  acknowledgeMilestone (idempotente), y migración de milestonesShown en storage (respaldo viejo
+  sin el campo se carga con [], tipo inválido se rechaza). Los 18 tests de C1 siguen pasando.
+- Decisiones de implementación donde el spec no especificaba: (1) `cameBackAfterGap` usa umbral
+  14 días (AT_RISK_DAYS) para el hueco; (2) R3 tiene su propio orden de prioridad de disparadores
+  (perfectWeek > consecutiveDays > threeInWeek); (3) `perfectWeek` exige además cero penalizaciones
+  en la ventana de 7 días (failed/cancelled, referenciadas por su deadline, ya que no tienen fecha
+  propia); (4) el surfacing de R3/A1 se hizo en una pantalla de resultado nueva en vez de inyectar
+  en CompleteMissionScreen, porque hoy el "+X 💕" es un toast, no una confirmación persistente;
+  (5) la subida de nivel NO dispara la pantalla de resultado (la LevelScene ya es la celebración).
+- **147 tests en verde** (114 + 33), `npm run lint` y `npm run build` limpios. NO se tocó git.
 
 ### 2026-06-13 — Onboarding con Cupido (Bloques 1-3)
 - Construido el MVP del onboarding con presentador (spec-y-recurrencia.md + flujo-y-guion.md

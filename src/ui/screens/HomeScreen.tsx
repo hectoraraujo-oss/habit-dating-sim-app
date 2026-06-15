@@ -3,6 +3,7 @@
 import type { Character, GameState, Mission, SlotNumber } from '../../types';
 import { SLOT_NUMBERS } from '../../game/constants';
 import { activeCharacters, isAtRisk } from '../../game/engine';
+import { reactionFor } from '../../game/reaction';
 import { DIFFICULTY_ICON, formatDeadline, formatLongDate } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
 import { Sprite } from '../components/Sprite';
@@ -72,6 +73,13 @@ export function HomeScreen({
                 key={slot.id}
                 character={slot}
                 atRisk={isAtRisk(slot, today)}
+                // Solo el personaje en riesgo trae su línea corta en el Home (spec §5);
+                // Cupido NO aparece en el idle del Home.
+                riskLine={
+                  isAtRisk(slot, today)
+                    ? reactionFor(slot, state.missions, today, { variantIndex: 0 }).characterLine
+                    : null
+                }
                 onOpen={() => onOpenProfile(slot.id)}
                 onCreateMission={() => onCreateMission(slot.id)}
               />
@@ -136,11 +144,13 @@ export function HomeScreen({
 function CharacterCard({
   character,
   atRisk,
+  riskLine,
   onOpen,
   onCreateMission,
 }: {
   character: Character;
   atRisk: boolean;
+  riskLine: string | null;
   onOpen: () => void;
   onCreateMission: () => void;
 }) {
@@ -164,6 +174,9 @@ function CharacterCard({
         <span className="rounded bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
           ⚠ Necesita atención
         </span>
+      )}
+      {riskLine && (
+        <p className="px-1 text-center text-xs italic leading-snug text-stone-500">“{riskLine}”</p>
       )}
       <div className="w-full">
         <HeartsBar character={character} atRisk={atRisk} />
