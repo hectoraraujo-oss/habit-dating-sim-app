@@ -80,6 +80,57 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   At-risk drama (dirección-visual.md §5). El sprite triste hace un "suspiro"
+   idle muy lento (NO un shake de alarma) y el borde de la card "respira" con
+   un glow naranja suave que aparece/desaparece. Movimiento lento triste =
+   "te extraño", no "¡atención!". Naranja, nunca rojo.
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes sigh {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(2px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes risk-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgb(251 146 60 / 0);
+  }
+  50% {
+    box-shadow: 0 0 16px rgb(251 146 60 / 0.5);
+  }
+}
+
+/* Variante más intensa (días 18-20, cerca del abandono): glow orange-500. */
+@keyframes risk-breathe-strong {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgb(249 115 22 / 0);
+  }
+  50% {
+    box-shadow: 0 0 20px rgb(249 115 22 / 0.65);
+  }
+}
+
+/* Suspiro idle lento del sprite en riesgo (4s loop, melancólico). */
+.animate-sigh {
+  animation: sigh 4s var(--ease-out-soft) infinite;
+}
+/* Borde de card que respira (3s loop). */
+.animate-risk-breathe {
+  animation: risk-breathe 3s var(--ease-out-soft) infinite;
+}
+.animate-risk-breathe-strong {
+  animation: risk-breathe-strong 3s var(--ease-out-soft) infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Guard global de accesibilidad: con prefers-reduced-motion las animaciones
    colapsan a ~1ms (dirección-visual.md §3). El conteo numérico hace lo
    equivalente en JS (useCountUp setea el valor final directo).

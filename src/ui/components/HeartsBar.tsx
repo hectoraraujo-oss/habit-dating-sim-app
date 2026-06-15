@@ -16,9 +16,19 @@ interface HeartsBarProps {
   atRisk?: boolean;
   // heartsTotal de ANTES de la última misión: dispara el llenado animado + conteo + shimmer.
   animateFromHearts?: number;
+  // 'gain' (default): celebración — el conteo sube y la barra hace shimmer al llenarse.
+  // 'loss': penalización sobria (dirección-visual.md §3) — la barra BAJA con la misma
+  // transición pero SIN shimmer (nada de fiesta); el conteo desciende. Más lenta a propósito
+  // no: la pérdida nunca dura ni brilla más que la ganancia equivalente.
+  mode?: 'gain' | 'loss';
 }
 
-export function HeartsBar({ character, atRisk = false, animateFromHearts }: HeartsBarProps) {
+export function HeartsBar({
+  character,
+  atRisk = false,
+  animateFromHearts,
+  mode = 'gain',
+}: HeartsBarProps) {
   const progress = heartsToNextLevel(character.level, character.heartsTotal);
   const animating = animateFromHearts !== undefined && progress !== null;
 
@@ -46,13 +56,19 @@ export function HeartsBar({ character, atRisk = false, animateFromHearts }: Hear
     // En el frame siguiente al montaje, mueve la barra a su valor final (dispara la transición).
     const raf =
       typeof requestAnimationFrame === 'function' ? requestAnimationFrame(() => setMoved(true)) : 0;
+    // Shimmer SOLO en ganancia (celebración). En 'loss' la pérdida es sobria: nada de brillo.
+    if (mode === 'loss') {
+      return () => {
+        if (raf) cancelAnimationFrame(raf);
+      };
+    }
     // Shimmer una vez al terminar de llenarse (~800ms de la transición de width).
     const t = setTimeout(() => setShimmer(true), 820);
     return () => {
       if (raf) cancelAnimationFrame(raf);
       clearTimeout(t);
     };
-  }, [animating]);
+  }, [animating, mode]);
 
   // Nivel máximo: sin barra. (Se evalúa DESPUÉS de los hooks.)
   if (!progress) {
@@ -62,12 +78,15 @@ export function HeartsBar({ character, atRisk = false, animateFromHearts }: Hear
   const ratio = animating ? (moved ? targetRatio : fromRatio) : targetRatio;
   const shownCurrent = animating ? animatedCurrent : progress.current;
   const fillColor = atRisk ? 'bg-risk' : 'bg-love';
+  // En 'loss' la barra baja un poco más rápido (500ms, §3) y nunca brilla; en 'gain' se
+  // llena en 800ms y hace shimmer al final.
+  const fillDuration = mode === 'loss' ? 'duration-[500ms]' : 'duration-[800ms]';
 
   return (
     <div>
       <div className="h-3 w-full overflow-hidden rounded-full border border-border bg-love-soft">
         <div
-          className={`h-full ${fillColor} transition-[width] duration-[800ms] ease-[var(--ease-out-soft)] ${
+          className={`h-full ${fillColor} transition-[width] ${fillDuration} ease-[var(--ease-out-soft)] ${
             shimmer ? 'animate-bar-shimmer' : ''
           }`}
           style={{ width: `${ratio * 100}%` }}

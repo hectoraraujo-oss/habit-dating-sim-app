@@ -4,7 +4,8 @@ import { useState } from 'react';
 import type { Character, GameState, Mission, SlotNumber } from '../../types';
 import { SLOT_NUMBERS } from '../../game/constants';
 import { daysBetween } from '../../game/dates';
-import { activeCharacters, isAtRisk } from '../../game/engine';
+import { activeCharacters, daysInactive, isAtRisk, riskLevel } from '../../game/engine';
+import type { RiskLevel } from '../../game/engine';
 import { reactionFor } from '../../game/reaction';
 import { DIFFICULTY_ICON, formatDeadline, formatLongDate } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
@@ -114,6 +115,9 @@ export function HomeScreen({
                 key={slot.id}
                 character={slot}
                 atRisk={isAtRisk(slot, today)}
+                // Escalada del at-risk por días de inactividad (§5): 'soft' 14-17,
+                // 'strong' 18-20 (más cerca del abandono a los 21).
+                risk={riskLevel(daysInactive(slot, today))}
                 // Solo el personaje en riesgo trae su línea corta en el Home (spec §5);
                 // Cupido NO aparece en el idle del Home.
                 riskLine={
@@ -185,26 +189,35 @@ export function HomeScreen({
 function CharacterCard({
   character,
   atRisk,
+  risk,
   riskLine,
   onOpen,
   onCreateMission,
 }: {
   character: Character;
   atRisk: boolean;
+  risk: RiskLevel;
   riskLine: string | null;
   onOpen: () => void;
   onCreateMission: () => void;
 }) {
+  // El borde vira a naranja (token --color-risk) en riesgo, y al naranja intenso
+  // (--color-risk-strong) en días 18-20. El borde RESPIRA con un glow naranja lento
+  // (risk-breathe) — "te extraño", no alarma. Naranja, nunca rojo (§5).
+  const borderClass =
+    risk === 'strong'
+      ? 'border-risk-strong animate-risk-breathe-strong'
+      : risk === 'soft'
+        ? 'border-risk animate-risk-breathe'
+        : 'border-border';
+
   return (
-    <div
-      className={`flex flex-col items-center gap-2 rounded-xl border-2 bg-white p-4 ${
-        atRisk ? 'border-orange-400' : 'border-pink-200'
-      }`}
-    >
+    <div className={`flex flex-col items-center gap-2 rounded-card border-2 bg-surface p-4 ${borderClass}`}>
       <button onClick={onOpen} className="flex flex-col items-center gap-2">
-        <Sprite character={character} size={80} sad={atRisk} />
-        <span className="font-semibold text-stone-700">{character.name}</span>
-        <span className="text-xs text-stone-500">Nivel {character.level}</span>
+        {/* En riesgo: grayscale triste + suspiro idle lento (NO shake). */}
+        <Sprite character={character} size={80} sad={atRisk} sigh={atRisk} />
+        <span className="font-semibold text-ink">{character.name}</span>
+        <span className="text-xs text-ink-soft">Nivel {character.level}</span>
       </button>
       {character.level === 3 && (
         <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
@@ -212,7 +225,11 @@ function CharacterCard({
         </span>
       )}
       {atRisk && (
-        <span className="rounded bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+        <span
+          className={`rounded px-2 py-0.5 text-xs font-semibold ${
+            risk === 'strong' ? 'bg-orange-100 text-risk-strong' : 'bg-orange-100 text-orange-700'
+          }`}
+        >
           ⚠ Necesita atención
         </span>
       )}

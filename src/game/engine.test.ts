@@ -11,9 +11,11 @@ import {
   completedMissionsCount,
   createCharacter,
   daysTogether,
+  daysUntilLeaving,
   deleteCharacter,
   freeSlots,
   isAtRisk,
+  riskLevel,
 } from './engine';
 
 const TODAY = '2026-06-11';
@@ -100,6 +102,26 @@ describe('estadísticas para pantallas', () => {
     expect(isAtRisk(makeCharacter({ lastMissionCompletedDate: addDays(TODAY, -14) }), TODAY)).toBe(true);
     expect(isAtRisk(makeCharacter({ lastMissionCompletedDate: addDays(TODAY, -20) }), TODAY)).toBe(true);
     expect(isAtRisk(makeCharacter({ lastMissionCompletedDate: addDays(TODAY, -21) }), TODAY)).toBe(false);
+  });
+});
+
+describe('escalada de riesgo por días (dirección-visual.md §5)', () => {
+  it('riskLevel: none fuera de la ventana, soft 14-17, strong 18-20', () => {
+    expect(riskLevel(13)).toBe('none');
+    expect(riskLevel(14)).toBe('soft');
+    expect(riskLevel(17)).toBe('soft');
+    expect(riskLevel(18)).toBe('strong');
+    expect(riskLevel(20)).toBe('strong');
+    // A los 21 días ya es abandono, no riesgo.
+    expect(riskLevel(21)).toBe('none');
+  });
+
+  it('daysUntilLeaving: cuenta hacia el abandono (21) y no devuelve negativos', () => {
+    expect(daysUntilLeaving(14)).toBe(7);
+    expect(daysUntilLeaving(18)).toBe(3);
+    expect(daysUntilLeaving(20)).toBe(1);
+    expect(daysUntilLeaving(21)).toBe(0);
+    expect(daysUntilLeaving(30)).toBe(0);
   });
 });
 
