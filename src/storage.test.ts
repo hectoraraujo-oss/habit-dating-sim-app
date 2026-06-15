@@ -336,3 +336,51 @@ describe('milestonesShown — campo nuevo y migración suave (A1 / P8-a)', () =>
     });
   });
 });
+
+// Nudge de respaldo (ICE 504): campo lastExportDate en la raíz con migración suave
+// (sin subir SCHEMA_VERSION), exactamente como onboarded. Ausente en respaldos viejos = null.
+describe('lastExportDate — campo nuevo y migración suave (nudge de respaldo)', () => {
+  it('createEmptyState nace con lastExportDate: null', () => {
+    expect(createEmptyState().lastExportDate).toBeNull();
+  });
+
+  it('un respaldo viejo SIN lastExportDate se carga como null (no rechaza, C1)', () => {
+    const storage = memoryStorage();
+    const legacy = { ...sampleState() } as Record<string, unknown>;
+    delete legacy.lastExportDate; // respaldo anterior a esta feature
+    storage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+    expect(loadState(storage).lastExportDate).toBeNull();
+  });
+
+  it('importStateJson de un respaldo viejo SIN lastExportDate lo normaliza a null', () => {
+    const legacy = { ...sampleState() } as Record<string, unknown>;
+    delete legacy.lastExportDate;
+    const result = importStateJson(JSON.stringify(legacy));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.state.lastExportDate).toBeNull();
+  });
+
+  it('conserva la fecha ISO cuando el campo existe', () => {
+    const storage = memoryStorage();
+    saveState({ ...sampleState(), lastExportDate: '2026-06-01' }, storage);
+    expect(loadState(storage).lastExportDate).toBe('2026-06-01');
+  });
+
+  it('rechaza un respaldo con lastExportDate de tipo inválido (coherente con C1)', () => {
+    const state = sampleState();
+    const garbage = { ...state, lastExportDate: 42 };
+    expect(importStateJson(JSON.stringify(garbage))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+
+  it('rechaza un respaldo con lastExportDate que no es fecha ISO real (coherente con C1)', () => {
+    const state = sampleState();
+    const garbage = { ...state, lastExportDate: 'ayer' };
+    expect(importStateJson(JSON.stringify(garbage))).toEqual({
+      ok: false,
+      error: 'invalid_schema',
+    });
+  });
+});

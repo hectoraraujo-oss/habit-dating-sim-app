@@ -12,10 +12,11 @@ interface DataScreenProps {
   state: GameState;
   today: string;
   onImport: (state: GameState) => void;
+  onExported: () => void;
   onBack: () => void;
 }
 
-export function DataScreen({ state, today, onImport, onBack }: DataScreenProps) {
+export function DataScreen({ state, today, onImport, onExported, onBack }: DataScreenProps) {
   const [pendingImport, setPendingImport] = useState<GameState | null>(null);
 
   function handleExport() {
@@ -26,6 +27,8 @@ export function DataScreen({ state, today, onImport, onBack }: DataScreenProps) 
     link.download = `habit-dating-sim-respaldo-${today}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    // Registra el respaldo para apagar el nudge del Home (App actualiza lastExportDate = today).
+    onExported();
   }
 
   return (

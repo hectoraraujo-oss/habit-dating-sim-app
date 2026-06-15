@@ -3,8 +3,11 @@
 // (convivencia P7-b: un solo Cupido por evento, primero el personaje, luego Cupido):
 //   1. +X 💕 (ya existía como toast; aquí se muestra en grande con expresión feliz).
 //   2. R3: línea extra de celebración del personaje cuando hay momentum (celebration).
-//   3. A1: cuadro de Cupido (hito grande) o toast ligero (hito menor) cuando se cruzó un hito.
-// Si no hay celebración ni hito, esta pantalla no se usa (App cae directo al Home con toast).
+//   3. A1: cuadro de Cupido (hito grande) cuando se cruzó un hito grande.
+// Routing (App.tsx): el hito MENOR ya NO abre esta pantalla — se muestra como Toast de App.
+// Esta pantalla solo aparece con celebración (R3) o con hito GRANDE. Un hito menor solo
+// llega aquí como pill ligera si COEXISTE con una celebración (para no perder ni saturar).
+// Si no hay celebración ni hito grande, App cae directo al Home/Perfil con toast.
 
 import type { Character } from '../../types';
 import type { Celebration, MilestoneReaction } from '../../game/reaction';

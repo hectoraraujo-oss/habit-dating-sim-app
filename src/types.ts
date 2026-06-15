@@ -63,6 +63,11 @@ export interface GameState {
   // un respaldo viejo sin el campo se normaliza a true al cargar (no se re-onboardea a quien
   // ya jugó) — ver normalizeLoaded en storage.ts. NO sube SCHEMA_VERSION.
   onboarded: boolean;
+  // Fecha ISO (YYYY-MM-DD) del último respaldo exportado, o null si nunca se exportó.
+  // Alimenta el nudge de respaldo del Home (ICE 504: mitiga el riesgo #1 — pérdida de datos
+  // de localStorage). Migración suave en storage.ts: respaldos viejos sin el campo se
+  // normalizan a null al cargar (igual que onboarded) — NO sube SCHEMA_VERSION.
+  lastExportDate: string | null;
   characters: Character[];
   missions: Mission[];
   happyEndings: HappyEnding[];

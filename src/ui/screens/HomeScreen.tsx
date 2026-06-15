@@ -1,12 +1,17 @@
 // Pantalla 1: Home — grid de 3 slots + misiones pendientes (flujo-pantallas.md).
 
+import { useState } from 'react';
 import type { Character, GameState, Mission, SlotNumber } from '../../types';
 import { SLOT_NUMBERS } from '../../game/constants';
+import { daysBetween } from '../../game/dates';
 import { activeCharacters, isAtRisk } from '../../game/engine';
 import { reactionFor } from '../../game/reaction';
 import { DIFFICULTY_ICON, formatDeadline, formatLongDate } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
 import { Sprite } from '../components/Sprite';
+
+// Cada cuántos días sin respaldar vuelve a sugerirse exportar (nudge de respaldo, ICE 504).
+const BACKUP_NUDGE_DAYS = 14;
 
 interface HomeScreenProps {
   state: GameState;
@@ -29,6 +34,18 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const active = activeCharacters(state);
   const noCharacters = active.length === 0;
+
+  // Nudge de respaldo (ICE 504, mitiga el riesgo #1: pérdida de datos de localStorage).
+  // Se invita a respaldar si hay al menos un personaje Y nunca se exportó (lastExportDate
+  // null) o pasaron más de 14 días desde el último respaldo. Descartable solo en memoria
+  // (no se persiste): vuelve a aparecer en la próxima apertura si la condición sigue.
+  const [backupNudgeDismissed, setBackupNudgeDismissed] = useState(false);
+  const daysSinceExport =
+    state.lastExportDate === null ? null : daysBetween(state.lastExportDate, today);
+  const showBackupNudge =
+    !backupNudgeDismissed &&
+    active.length >= 1 &&
+    (daysSinceExport === null || daysSinceExport > BACKUP_NUDGE_DAYS);
 
   // Personajes en riesgo aparecen primero, el resto conserva su orden de slot
   const orderedSlots: (Character | SlotNumber)[] = [
@@ -53,6 +70,30 @@ export function HomeScreen({
           <p className="mb-4 text-center text-sm text-stone-500">
             Tus relaciones aparecen aquí. Empieza creando una.
           </p>
+        )}
+
+        {showBackupNudge && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+            <span className="text-xl">💾</span>
+            <p className="flex-1 text-xs leading-snug text-sky-800">
+              {state.lastExportDate === null
+                ? 'Tus avances viven solo en este navegador. Cuando puedas, guarda un respaldo para no perder a nadie.'
+                : 'Ha pasado un tiempo desde tu último respaldo. Un buen momento para guardar uno nuevo.'}
+            </p>
+            <button
+              onClick={onOpenData}
+              className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-600"
+            >
+              Respaldar
+            </button>
+            <button
+              onClick={() => setBackupNudgeDismissed(true)}
+              className="text-lg leading-none text-sky-400 transition hover:text-sky-600"
+              title="Ahora no"
+            >
+              ×
+            </button>
+          </div>
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

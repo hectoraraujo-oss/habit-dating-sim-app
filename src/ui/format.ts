@@ -19,6 +19,15 @@ export function formatLongDate(isoDate: string): string {
   return capitalize(LONG_DATE.format(parseLocal(isoDate)));
 }
 
+const SHORT_DATE = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// Fecha corta absoluta para fechas históricas o lejanas: "4 jun 2026". A diferencia de
+// formatDeadline (relativo: hoy/mañana/vencida), aquí siempre se muestra la fecha completa,
+// para "venció el …", "Juntos desde …" y el historial del perfil.
+export function formatShortDate(isoDate: string): string {
+  return SHORT_DATE.format(parseLocal(isoDate));
+}
+
 // Deadline relativo para listas: "hoy", "mañana", "vencida", o fecha corta
 export function formatDeadline(deadline: string, today: string): string {
   const days = daysBetween(today, deadline);
