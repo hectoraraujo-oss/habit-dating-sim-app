@@ -19,12 +19,15 @@ export function AbandonmentScene({ state, character, today, onClose }: Abandonme
   const completed = completedMissionsCount(state, character.id);
   const fewMissions = completed < 4;
 
+  // Migrada a tokens (Ola 4, barrido de cohesión). Mantiene su fondo oscuro: es pérdida,
+  // sobria, sin fiesta. --color-scene-abandon (el más oscuro), radios de token, y el aviso
+  // de "bajó de nivel" en --color-risk (naranja = melancolía, NO rojo de error).
   return (
-    <div className="flex min-h-svh flex-col items-center bg-stone-950 px-4 py-6 text-center text-stone-200">
+    <div className="flex min-h-svh flex-col items-center bg-scene-abandon px-4 py-6 text-center text-stone-200">
       <img
         src={ABANDONMENT_SCENE}
         alt="Escena de abandono"
-        className="max-h-[50svh] w-full max-w-2xl rounded-xl object-cover opacity-90"
+        className="max-h-[50svh] w-full max-w-2xl rounded-card object-cover opacity-90"
         style={{ imageRendering: 'pixelated' }}
       />
 
@@ -51,7 +54,7 @@ export function AbandonmentScene({ state, character, today, onClose }: Abandonme
         {left ? (
           <p className="text-sm text-stone-400">Esta habitación ahora está libre.</p>
         ) : (
-          <p className="text-sm font-semibold text-orange-400">
+          <p className="text-sm font-semibold text-risk">
             Bajó a Nivel {character.level}. Completa una misión pronto o se irá de verdad.
           </p>
         )}
@@ -59,7 +62,7 @@ export function AbandonmentScene({ state, character, today, onClose }: Abandonme
 
       <button
         onClick={onClose}
-        className="mb-4 w-full max-w-xs rounded-xl bg-stone-700 px-4 py-3 font-bold text-white transition hover:bg-stone-600"
+        className="mb-4 w-full max-w-xs rounded-cta bg-stone-700 px-4 py-3 font-bold text-white transition hover:bg-stone-600"
       >
         {left ? 'Cerrar este capítulo' : 'Entendido'}
       </button>

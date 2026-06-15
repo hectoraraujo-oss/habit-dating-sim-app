@@ -13,6 +13,7 @@ import {
 import { reactionFor } from '../../game/reaction';
 import { DIFFICULTY_LABEL, formatDeadline, formatShortDate, LEVEL_STAGE } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
+import { ReactiveBubble } from '../components/ReactiveBubble';
 import { Sprite } from '../components/Sprite';
 
 interface ProfileScreenProps {
@@ -69,7 +70,14 @@ export function ProfileScreen({
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-5">
         <section className="flex flex-col items-center gap-2 rounded-xl border-2 border-pink-200 bg-white p-6">
-          <Sprite character={character} size={128} sad={reaction.sprite === 'sad'} sigh={atRisk} />
+          {/* Respiración idle en reposo normal; si está en riesgo, suspira en vez de respirar. */}
+          <Sprite
+            character={character}
+            size={128}
+            sad={reaction.sprite === 'sad'}
+            sigh={atRisk}
+            idle={!atRisk}
+          />
           <h1 className="text-xl font-bold text-stone-800">{character.name}</h1>
           <p className="text-sm text-stone-500">
             Nivel {character.level} — {LEVEL_STAGE[character.level]}
@@ -81,13 +89,13 @@ export function ProfileScreen({
             Juntos desde {formatShortDate(character.createdDate)} · {daysTogether(character, today)} días juntos
           </p>
 
-          {/* R2 idle: línea reactiva del personaje (2da persona) + marco opcional de Cupido. */}
-          <div className="mt-2 w-full max-w-sm rounded-xl border border-pink-200 bg-pink-50/70 px-4 py-3">
-            <p className="text-sm italic leading-relaxed text-stone-700">“{reaction.characterLine}”</p>
-            {reaction.cupidoLine && (
-              <p className="mt-1 text-xs text-pink-500">Cupido: {reaction.cupidoLine}</p>
-            )}
-          </div>
+          {/* R2 idle: línea reactiva del personaje (2da persona) + marco opcional de Cupido.
+              Presentación unificada en ReactiveBubble (§2 principio 5). */}
+          <ReactiveBubble
+            characterLine={reaction.characterLine}
+            cupidoLine={reaction.cupidoLine}
+            className="mt-2 w-full max-w-sm"
+          />
         </section>
 
         {atRisk && (
@@ -162,7 +170,7 @@ export function ProfileScreen({
         <div className="mx-auto max-w-2xl">
           <button
             onClick={onCreateMission}
-            className="w-full rounded-xl bg-pink-500 px-4 py-3 font-bold text-white transition hover:bg-pink-600"
+            className="w-full rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press"
           >
             + Crear nueva misión
           </button>

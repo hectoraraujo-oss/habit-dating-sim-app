@@ -212,6 +212,28 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Ola 4 — cohesión fina (dirección-visual.md §6 + §2 principio 3).
+   Respiración idle del sprite EN REPOSO: el sprite "vive" con un breathe muy
+   sutil y lento (4s loop), distinto del `sigh` triste del at-risk. Da vida sin
+   distraer. Solo corre en estado normal (NO at-risk, NO recién nacido): no
+   debe convivir con happy-pop (celebración) ni con sigh (tristeza).
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes idle-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+/* Respiración idle lenta del sprite en reposo (4s loop, casi imperceptible). */
+.animate-idle-breathe {
+  animation: idle-breathe 4s var(--ease-out-soft) infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Guard global de accesibilidad: con prefers-reduced-motion las animaciones
    colapsan a ~1ms (dirección-visual.md §3). El conteo numérico hace lo
    equivalente en JS (useCountUp setea el valor final directo).

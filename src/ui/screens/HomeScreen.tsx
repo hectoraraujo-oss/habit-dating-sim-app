@@ -252,7 +252,15 @@ function CharacterCard({
         {/* En riesgo: grayscale triste + suspiro idle lento (NO shake). Al nacer: latido único
             sobre el sprite (happy-pop). El at-risk de un recién nacido no aplica en la práctica. */}
         <span className={born ? 'animate-happy-pop inline-block' : 'inline-block'}>
-          <Sprite character={character} size={80} sad={atRisk} sigh={atRisk} />
+          {/* Respiración idle solo en reposo normal: NO si está en riesgo (suspira) ni si
+              acaba de nacer (el happy-pop del wrapper está corriendo). §6 + §2 principio 3. */}
+          <Sprite
+            character={character}
+            size={80}
+            sad={atRisk}
+            sigh={atRisk}
+            idle={!atRisk && !born}
+          />
         </span>
         <span className="font-semibold text-ink">{character.name}</span>
         <span className="text-xs text-ink-soft">Nivel {character.level}</span>
@@ -279,7 +287,7 @@ function CharacterCard({
       </div>
       <button
         onClick={onCreateMission}
-        className="mt-1 w-full rounded-lg bg-pink-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-pink-600"
+        className="mt-1 w-full rounded-card bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-press"
       >
         + misión
       </button>

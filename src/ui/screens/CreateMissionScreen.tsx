@@ -150,7 +150,7 @@ export function CreateMissionScreen({
             <button
               onClick={handleConfirm}
               disabled={!valid && name.trim().length > 0}
-              className="mt-5 w-full rounded-xl bg-pink-500 px-4 py-3 font-bold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:bg-stone-300"
+              className="mt-5 w-full rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
             >
               Confirmar misión
             </button>
