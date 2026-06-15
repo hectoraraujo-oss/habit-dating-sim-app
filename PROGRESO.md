@@ -1,6 +1,6 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 4 Ola 1.5 — juice en CADA complete con auto-advance (el juice ya no depende de que el motor dispare celebración/hito grande; todo complete sin subida de nivel pasa por MissionResultScreen y auto-avanza cuando no hay copy que leer) — siguiente: verificación manual del Director en navegador (complete normal con juice+auto-advance, complete con celebración que espera Continuar, hito menor con juice+toast, prefers-reduced-motion) + Olas 2-3 del pulido visual (at-risk, penalización sobria, level-scene/boda)
+## Estado actual: Fase 4 Ola 2 — at-risk drama (suspiro idle + borde que respira + escalada 18-20 días + banner de tristeza en el Perfil) y penalización sobria (CancellationScene con descenso único del número, barra que drena sin shimmer, grayscale; rojo solo en el número de pérdida). Asimetría 80/20 completa en su lado sobrio. 167 tests verdes, lint y build limpios. Siguiente: verificación manual del Director en navegador (at-risk con suspiro/breathe/escalada, cancelación sobria, prefers-reduced-motion) + Ola 3 del pulido visual (level-scene cinematográfica/boda amplificada, aterrizaje de card al crear personaje)
 
 **Motor de reactividad (2026-06-14, decisión P8-a; spec del vault en
 `projects/habit-dating-sim/equipo/mecanicas/motor-reactividad-spec.md`):** construidas las tres
@@ -161,6 +161,60 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 2 — at-risk drama + penalización sobria
+- Ola 2 del pulido visual = la asimetría 80/20 en su lado sobrio (fuente: `equipo/fase4/
+  direccion-visual.md` §5 y la subsección "Asimetría 80/20" de §3). Dos piezas, ambas con
+  los tokens ya existentes. NO se tocó LevelScene/boda ni la celebración de completar (Olas
+  1/3). **167 tests en verde** (165 + 2 nuevos de helpers puros), lint y build limpios. Sin
+  dependencias nuevas. NO se tocó git.
+- **CSS (`src/index.css`):** keyframes `sigh` (suspiro idle lento 4s: translateY 0->2px +
+  opacity .8->.7), `risk-breathe` (glow naranja --color-risk que aparece/desaparece en 3s) y
+  su variante `risk-breathe-strong` (glow --color-risk-strong para días 18-20), con clases
+  `.animate-sigh` / `.animate-risk-breathe[-strong]`. El guard global de prefers-reduced-motion
+  ya existente las colapsa a 1ms.
+- **Escalada de riesgo (lógica pura en `engine.ts`, testeada):** `riskLevel(daysInactive)` →
+  'none' fuera de 14-20, 'soft' en 14-17, 'strong' en 18-20 (umbral RISK_STRONG_DAYS=18; el
+  abandono cae a los 21). `daysUntilLeaving(daysInactive)` = días restantes antes de marcharse
+  (ABANDONMENT_DAYS - inactividad, mínimo 0). Se reusó el helper `daysInactive` ya existente.
+- **Home (`HomeScreen`/CharacterCard):** el personaje en riesgo (ya iba primero y con borde
+  naranja) ahora: sprite con `sigh` (idle lento melancólico, prop nueva opcional en `Sprite`,
+  NO shake), borde de card que respira (`animate-risk-breathe`), y escalada a
+  --color-risk-strong + `risk-breathe-strong` en días 18-20. Borde/colores migrados a tokens
+  (border-risk[-strong], border-border, bg-surface, text-ink). Naranja, nunca rojo.
+- **Perfil (`ProfileScreen`):** banner de riesgo nuevo (solo si isAtRisk) con días sin verse +
+  días restantes antes de irse, en tono tristeza ("X lleva N días sin verte. Le quedan M antes
+  de marcharse."), NUNCA culpa. Naranja con escalada a --color-risk-strong + breathe en 18-20.
+  El sprite del Perfil también suspira en riesgo.
+- **Penalización sobria (`CancellationScene`, §3 asimetría):** el "−X 💕" hace fade-in lento
+  (~400ms opacity, --ease-in-quiet) y DESPUÉS un único descenso del número (count-down con
+  useCountUp, de la penalización a 0), SIN shimmer/partículas/glow. La hearts bar baja con
+  transition-[width] ~500ms y se queda (modo 'loss' nuevo en `HeartsBar`: misma transición que
+  la ganancia pero sin shimmer, 500ms en vez de 800ms). La ilustración vira a grayscale con
+  transición ~300ms. Rojo apagado (--color-danger) SOLO en el número de la pérdida. Migrada a
+  tokens (danger, ink, surface, border, rounded-card/cta) sin rediseñar. Regla dura respetada:
+  la pérdida no dura ni brilla más que la ganancia equivalente.
+- **Decisiones donde el doc no especificaba:** (1) la escena de cancelación muestra una
+  ILUSTRACIÓN (no el componente Sprite), así que el "grayscale del sprite" se aplicó a esa
+  imagen — es la representación del personaje en esta pantalla; (2) el valor "antes" del
+  count-down se deriva como `heartsTotal + penalty` (el character que llega ya trae el total
+  DESPUÉS de la penalización, paralelo a cómo MissionResultScreen deriva el "antes" en la
+  ganancia); (3) el descenso del número arranca tras un setTimeout de 400ms (no en el mismo
+  frame del fade-in) para que el orden sea "aparece, luego baja"; (4) el banner de riesgo del
+  Home se mantuvo como la línea reactiva corta ya existente (no se duplicó); el banner con
+  días restantes vive solo en el Perfil (donde hay espacio), como pide §5; (5) RISK_STRONG_DAYS
+  fijado en 18 (días 18-20 = "strong", como dice el doc literalmente).
+- **Tests:** 2 nuevos `it` puros (`riskLevel` cubre none/soft/strong y los bordes 13/14/17/18/
+  20/21; `daysUntilLeaving` cubre 14/18/20/21/30). El resto es visual.
+- **Revisar en navegador (verificación del Director):** (1) un personaje con ~14-17 días de
+  inactividad: borde naranja que RESPIRA lento + sprite que SUSPIRA (sube/baja 2px muy lento,
+  NO shake) + banner de tristeza en el Perfil con días restantes; (2) escalar a 18-20 días:
+  naranja más intenso (--color-risk-strong) en borde, badge y banner; (3) la escena de
+  cancelación (dejar vencer una misión o cancelar): el "−X 💕" aparece con fade lento y DESPUÉS
+  baja una sola vez, la barra DRENA y se queda, la ilustración en grayscale, SIN partículas ni
+  brillo — debe sentirse más sobrio y corto que la celebración de ganancia; (4)
+  prefers-reduced-motion activado: suspiro/breathe colapsan, el count-down cae directo al valor
+  final. Nota: el sprite "triste/feliz" sigue siendo el placeholder en grayscale.
 
 ### 2026-06-14: Fase 4 Ola 1.5 — juice en cada complete con auto-advance
 - Se cerró el gap de la Ola 1: la secuencia de juice (sprite pop, corazones flotantes, conteo

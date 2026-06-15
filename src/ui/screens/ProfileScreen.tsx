@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import type { Character, GameState, Mission } from '../../types';
-import { completedMissionsCount, daysTogether } from '../../game/engine';
+import {
+  completedMissionsCount,
+  daysInactive,
+  daysTogether,
+  daysUntilLeaving,
+  isAtRisk,
+  riskLevel,
+} from '../../game/engine';
 import { reactionFor } from '../../game/reaction';
 import { DIFFICULTY_LABEL, formatDeadline, formatShortDate, LEVEL_STAGE } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
@@ -44,6 +51,14 @@ export function ProfileScreen({
   const cancelledCount = missions.filter((m) => m.status === 'cancelled' || m.status === 'failed').length;
   const noMissions = missions.length === 0;
 
+  // Banner de riesgo (dirección-visual.md §5): días sin verse + cuántos quedan antes de que
+  // se vaya. Tono tristeza, NUNCA culpa ("le fallaste"). Naranja, nunca rojo. Escala a
+  // --color-risk-strong en días 18-20 (muy cerca del abandono a los 21).
+  const atRisk = isAtRisk(character, today);
+  const inactiveDays = daysInactive(character, today);
+  const risk = riskLevel(inactiveDays);
+  const daysLeft = daysUntilLeaving(inactiveDays);
+
   return (
     <div className="flex min-h-svh flex-col bg-pink-50">
       <header className="border-b-4 border-pink-200 bg-white px-4 py-3">
@@ -54,7 +69,7 @@ export function ProfileScreen({
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-5">
         <section className="flex flex-col items-center gap-2 rounded-xl border-2 border-pink-200 bg-white p-6">
-          <Sprite character={character} size={128} sad={reaction.sprite === 'sad'} />
+          <Sprite character={character} size={128} sad={reaction.sprite === 'sad'} sigh={atRisk} />
           <h1 className="text-xl font-bold text-stone-800">{character.name}</h1>
           <p className="text-sm text-stone-500">
             Nivel {character.level} — {LEVEL_STAGE[character.level]}
@@ -74,6 +89,30 @@ export function ProfileScreen({
             )}
           </div>
         </section>
+
+        {atRisk && (
+          <div
+            className={`mt-3 flex items-start gap-3 rounded-card border-2 px-4 py-3 ${
+              risk === 'strong'
+                ? 'border-risk-strong bg-orange-50 animate-risk-breathe-strong'
+                : 'border-risk bg-orange-50/70 animate-risk-breathe'
+            }`}
+          >
+            <span className="text-xl">🕊️</span>
+            <p
+              className={`text-sm leading-snug ${
+                risk === 'strong' ? 'font-semibold text-risk-strong' : 'text-risk'
+              }`}
+            >
+              {character.name} lleva {inactiveDays} {inactiveDays === 1 ? 'día' : 'días'} sin verte.
+              {daysLeft > 0
+                ? ` Le ${daysLeft === 1 ? 'queda' : 'quedan'} ${daysLeft} ${
+                    daysLeft === 1 ? 'día' : 'días'
+                  } antes de marcharse.`
+                : ' Está a punto de marcharse.'}
+            </p>
+          </div>
+        )}
 
         <section className="mt-3 grid grid-cols-3 gap-2 text-center">
           <Stat value={`✓ ${completedMissionsCount(state, character.id)}`} label="completadas" />

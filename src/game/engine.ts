@@ -75,6 +75,26 @@ export function isAtRisk(character: Character, today: string): boolean {
   return days >= AT_RISK_DAYS && days < ABANDONMENT_DAYS;
 }
 
+// Nivel de escalada del at-risk por días de inactividad (dirección-visual.md §5). Pura y
+// testeable. 'none' fuera de la ventana de riesgo; 'soft' en días 14-17 (naranja, tristeza);
+// 'strong' en días 18-20 (naranja más intenso, ya muy cerca del abandono a los 21).
+export type RiskLevel = 'none' | 'soft' | 'strong';
+
+// Umbral en el que el at-risk sube a su variante intensa (días 18-20). El abandono cae a los 21.
+const RISK_STRONG_DAYS = 18;
+
+export function riskLevel(daysInactiveCount: number): RiskLevel {
+  if (daysInactiveCount < AT_RISK_DAYS || daysInactiveCount >= ABANDONMENT_DAYS) return 'none';
+  return daysInactiveCount >= RISK_STRONG_DAYS ? 'strong' : 'soft';
+}
+
+// Días que le quedan al personaje antes de marcharse (al cruzar ABANDONMENT_DAYS de
+// inactividad baja de nivel; desde nivel 0 se va). Pura, para el copy del banner de riesgo.
+// Mínimo 0 (no devuelve negativos si ya cruzó el umbral).
+export function daysUntilLeaving(daysInactiveCount: number): number {
+  return Math.max(0, ABANDONMENT_DAYS - daysInactiveCount);
+}
+
 // --- Helpers internos ---
 
 function patchCharacter(state: GameState, id: string, patch: Partial<Character>): GameState {
