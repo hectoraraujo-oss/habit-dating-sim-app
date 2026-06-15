@@ -1,6 +1,6 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 4 Ola 1 visual construida (tokens de diseño + secuencia de juice al completar misión) — siguiente: verificación manual del Director en navegador (secuencia de completar, conteo, partículas, prefers-reduced-motion) + Olas 2-3 del pulido visual (at-risk, penalización sobria, level-scene/boda)
+## Estado actual: Fase 4 Ola 1.5 — juice en CADA complete con auto-advance (el juice ya no depende de que el motor dispare celebración/hito grande; todo complete sin subida de nivel pasa por MissionResultScreen y auto-avanza cuando no hay copy que leer) — siguiente: verificación manual del Director en navegador (complete normal con juice+auto-advance, complete con celebración que espera Continuar, hito menor con juice+toast, prefers-reduced-motion) + Olas 2-3 del pulido visual (at-risk, penalización sobria, level-scene/boda)
 
 **Motor de reactividad (2026-06-14, decisión P8-a; spec del vault en
 `projects/habit-dating-sim/equipo/mecanicas/motor-reactividad-spec.md`):** construidas las tres
@@ -161,6 +161,57 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 1.5 — juice en cada complete con auto-advance
+- Se cerró el gap de la Ola 1: la secuencia de juice (sprite pop, corazones flotantes, conteo
+  del +X, llenado de barra con shimmer) ahora corre en CADA complete que no sea subida de nivel,
+  no solo cuando el motor dispara celebración (R3) o hito grande. El blueprint visual quería el
+  juice en la micro-interacción más frecuente. Sin fricción: cuando no hay nada que leer, la
+  pantalla auto-avanza sola. **165 tests en verde** (160 + 5 nuevos de `resultNeedsContinue`),
+  lint y build limpios. NO se tocó git.
+- **`App.tsx` `handleCompleteMission`:** se eliminaron las ramas que mandaban a Home+toast (el
+  complete normal y el hito-menor-solo). Ahora TODO complete sin subida de nivel navega a
+  `mission-result`, pasando `celebration` y `milestone` tal cual los calcula `reactionFor`
+  (pueden ser ambos null). La rama de subida de nivel (LevelScene) quedó intacta. El reconocimiento
+  del hito (`acknowledgeMilestone`) ya no se hace en App sino dentro de la pantalla, en el momento
+  de avanzar (la pantalla recibe el callback). El `Screen` de `mission-result` ganó un campo
+  `returnTo: 'home' | 'profile'`: 'home' cuando vino de completar misión, 'profile' cuando es un
+  hito grande cruzado al abrir el Perfil (ese path conserva su comportamiento: vuelve al Perfil,
+  sin toast de +💕).
+- **Decisión del toast (caso por caso):** la pantalla NO muestra el toast; lo decide App al
+  cerrarse (`finish`). (a) Hito MENOR (returnTo 'home'): Home + toast `✦ <línea del hito>`
+  (se conserva ese reconocimiento ligero que ya existía). (b) Complete NORMAL sin hito, y también
+  celebración / hito grande (returnTo 'home'): Home + el toast `¡Misión completada! +X 💕` que
+  existía antes (elegido por consistencia con el flujo previo y para dar cierre al evento). (c)
+  returnTo 'profile' (hito grande desde el Perfil): vuelve al Perfil sin toast (no hubo misión que
+  sumara corazones).
+- **`MissionResultScreen` (modificado):** el juice corre SIEMPRE (sin cambio). Nueva decisión pura
+  `resultNeedsContinue(celebration, milestone)` en `reaction.ts`: true si hay celebración O hito
+  GRANDE (algo que leer → copy + botón "Continuar", como antes); false si complete normal (ambos
+  null) o hito MENOR (nada que leer → auto-avance). En el caso de auto-avance NO se renderiza caja
+  de copy ni botón ni la pill del hito menor (ese reconocimiento sale como toast en el Home). El
+  cuadro grande de Cupido sigue siendo SOLO para hitos `big`.
+- **Auto-advance:** `setTimeout` de 2000ms (~la secuencia de juice) con `clearTimeout` en el
+  cleanup del efecto. Con `prefers-reduced-motion` baja a 300ms (no hay juice que ver). El efecto
+  depende solo de `needsContinue` (estable tras montar): los callbacks y el milestone viven en UN
+  `latestRef` actualizado en un efecto aparte (no en render: la regla `react-hooks/refs` del
+  plugin estricto prohíbe escribir refs durante el render), así el timer no se re-arma en cada
+  render. Guard `advanced` en el mismo ref para una sola salida (evita doble avance si timer y tap
+  caen juntos).
+- **Escape:** en el caso de auto-advance, un tap en cualquier parte de la pantalla llama `advance`
+  ya (sin esperar el timer). Cuando hay botón "Continuar", el tap del fondo no hace nada (el botón
+  es la acción explícita). No bloquea.
+- **Tests:** 5 nuevos `it` de `resultNeedsContinue` (complete normal → auto-advance; hito menor →
+  auto-advance; celebración → Continuar; hito grande → Continuar; celebración+hito menor →
+  Continuar). El ruteo de App con DOM no se testeó (sin entorno DOM en Vitest, que corre en node).
+- **Revisar en navegador (verificación del Director):** (1) complete NORMAL (sin nada especial):
+  debe correr el juice — sprite pop + partículas + conteo + llenado de barra — y auto-avanzar al
+  Home en ~2s con el toast "+X 💕"; (2) complete con CELEBRACIÓN (completar varias misiones hasta
+  que el motor dispare R3): debe quedarse esperando "Continuar" (el usuario lee la línea del
+  personaje y avanza); (3) hito MENOR (ej. week1 a los 7 días): juice + auto-advance + toast
+  "✦ …" en el Home; (4) `prefers-reduced-motion` activado: el juice colapsa (sin pop/float, conteo
+  directo) y el auto-advance es casi inmediato (~300ms); (5) tap durante el auto-advance: salta el
+  timer y va al Home ya.
 
 ### 2026-06-14: Fase 4 Ola 1 visual — tokens + secuencia de completar misión
 - Ola 1 del pulido visual (fuente de verdad: `equipo/fase4/direccion-visual.md` §1 y la

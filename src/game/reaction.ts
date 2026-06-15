@@ -273,6 +273,18 @@ function selectMilestone(signals: Signals, shown: readonly string[]): MilestoneR
 
 // --- Función principal ---
 
+// ¿La pantalla de resultado tiene algo que LEER (y por tanto necesita un "Continuar"
+// explícito), o no hay copy y debe AUTO-AVANZAR tras la secuencia de juice?
+// Fase 4 Ola 1.5: el juice corre en CADA complete, pero solo paramos al usuario cuando hay
+// texto. Hay algo que leer si hubo celebración (R3) O un hito GRANDE (cuadro de Cupido).
+// Un hito MENOR no cuenta como "leer": se reconoce como toast al auto-avanzar.
+export function resultNeedsContinue(
+  celebration: Celebration | null,
+  milestone: MilestoneReaction | null,
+): boolean {
+  return celebration !== null || (milestone !== null && milestone.big);
+}
+
 export function reactionFor(
   character: Character,
   missions: Mission[],
