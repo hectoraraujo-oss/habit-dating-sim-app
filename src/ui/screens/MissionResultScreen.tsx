@@ -27,6 +27,7 @@ import {
 } from '../../game/reaction';
 import { PresenterDialog } from '../components/PresenterDialog';
 import { ReactiveBubble } from '../components/ReactiveBubble';
+import { Button } from '../components/Button';
 import { Sprite } from '../components/Sprite';
 import { HeartsBar } from '../components/HeartsBar';
 import { FloatingHearts } from '../components/FloatingHearts';
@@ -159,12 +160,9 @@ export function MissionResultScreen({
 
       {/* Botón "Continuar" solo cuando hay algo que leer. Sin él, la pantalla auto-avanza. */}
       {needsContinue && (
-        <button
-          onClick={advance}
-          className="mt-8 w-full max-w-xs rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press"
-        >
+        <Button onClick={advance} className="mt-8 max-w-xs">
           Continuar
-        </button>
+        </Button>
       )}
     </div>
   );

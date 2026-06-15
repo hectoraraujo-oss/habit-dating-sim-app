@@ -1,6 +1,8 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 4 Ola 4 — cohesión fina (ÚLTIMA ola visual). Tres piezas, sin rediseñar pantallas: (A) respiración idle MUY sutil del sprite en reposo normal (keyframe `idle-breathe` scale 1->1.015, 4s; prop `idle` del Sprite; el suspiro triste del at-risk tiene prioridad, nunca conviven; aplicada en Home y Perfil); (B) bocadillo reactivo unificado (`ReactiveBubble.tsx`: caja rounded-card + surface-soft, personaje italic, Cupido en --color-love prefijado "Cupido:"; reemplaza el markup repetido en Perfil y MissionResultScreen, mismo contenido de reactionFor); (C) barrido de cohesión a tokens (AbandonmentScene migrada manteniendo fondo oscuro sobrio; CTAs primarios sueltos -> rounded-cta + bg-primary + shadow-cta; corazón ya era --color-love). prefers-reduced-motion colapsa el idle. Sin tests nuevos (piezas visuales); se conservan los 172 tests de la Ola 3. NO se tocó git. Siguiente: verificación manual del Director en navegador (respiración idle sutil que NO choque con at-risk/celebración; bocadillo unificado idéntico en Perfil y resultado; AbandonmentScene migrada).
+## Estado actual: Fase 4 Ola 5 "feel Duolingo" — la FIRMA (botón 3D + Baloo 2). Dos piezas, sin rediseñar pantallas ni tocar lógica: (A) tipografía Baloo 2 cargada local vía `@fontsource` (pesos 500/600/700/800), `--font-body` y `--font-sans` mapeados a Baloo 2 (chrome redondo, peso base medium), `--radius-card` 0.75rem→1rem; la mono pixel `--font-display` y el pixel art NO se tocan (identidad); (B) botón 3D estilo Duolingo (`src/ui/components/Button.tsx`, `motion.button`): cara primary + borde inferior 3D sólido de 4px (`--shadow-btn-3d`) que colapsa al presionar mientras la cara baja 4px (`whileTap`, spring stiffness 600/damping 20), con variantes primary/secondary/destructive y `useReducedMotion()`. Aplicado como drop-in a TODOS los CTA primarios (LO HICE, Continuar, Crear personaje/misión, Iniciar partida, Empezar, Crear nueva misión); los CTA sobrios de pérdida (Aceptar la pérdida, Entendido de cancelación/abandono) usan `variant="secondary"` sin fiesta y Eliminar usa `variant="destructive"`. **172 tests verdes, lint y build (tsc+vite) limpios.** NO se tocó git. Siguiente: Olas 6-8 (Cupido-Duo + confeti, springs, AnimatePresence) y verificación manual del Director. (La Ola 4 dejó de ser la última visual: la dirección "feel Duolingo" abrió Olas 5-8.)
+
+## Estado anterior: Fase 4 Ola 4 — cohesión fina (última ola de `direccion-visual.md`). Tres piezas, sin rediseñar pantallas: (A) respiración idle MUY sutil del sprite en reposo normal (keyframe `idle-breathe` scale 1->1.015, 4s; prop `idle` del Sprite; el suspiro triste del at-risk tiene prioridad, nunca conviven; aplicada en Home y Perfil); (B) bocadillo reactivo unificado (`ReactiveBubble.tsx`: caja rounded-card + surface-soft, personaje italic, Cupido en --color-love prefijado "Cupido:"; reemplaza el markup repetido en Perfil y MissionResultScreen, mismo contenido de reactionFor); (C) barrido de cohesión a tokens (AbandonmentScene migrada manteniendo fondo oscuro sobrio; CTAs primarios sueltos -> rounded-cta + bg-primary + shadow-cta; corazón ya era --color-love). prefers-reduced-motion colapsa el idle. Sin tests nuevos (piezas visuales); se conservan los 172 tests de la Ola 3. NO se tocó git. Siguiente: verificación manual del Director en navegador (respiración idle sutil que NO choque con at-risk/celebración; bocadillo unificado idéntico en Perfil y resultado; AbandonmentScene migrada).
 
 ## Estado anterior: Fase 4 Ola 3 — el clímax del 80% (la celebración mayor). LevelScene cinematográfica (fade-in del fondo + imagen con entrada scale 1.04->1 + título display con pop+glow + burst radial de ~14 corazones desde el centro), variante BODA amplificada en la MISMA pantalla (~21 partículas con 💍/💕, título amber, glow que pulsa 2 veces), y nacimiento de personaje (la card aterriza scale 0.85->1 + latido del sprite al aparecer en el Home, una sola vez). prefers-reduced-motion colapsa a fade simple (sin burst). NO se tocó at-risk/penalización (Olas 1-2) ni la AbandonmentScene. 172 tests verdes (167 + 5 de makeBurst), lint y build limpios.
 
@@ -163,6 +165,66 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 5 feel Duolingo — botón 3D + tipografía Baloo 2
+- Ola 5 del "feel Duolingo" = la FIRMA (fuente: `equipo/fase4/direccion-feel-duolingo.md` §2 botón,
+  §4 tipografía, "Ola 5" de §6). SOLO botón 3D + Baloo 2. NO Cupido-Duo, NO confeti, NO springs de
+  otras cosas (son Olas 6-8). Deps ya instaladas por el Director (`motion`, `canvas-confetti`,
+  `@fontsource/baloo-2`): no se instaló nada. NO se tocó git. El pixel art y la mono pixel
+  (--font-display) NO se tocan: son la identidad. **172 tests en verde, lint y build limpios.**
+- **A. Tipografía Baloo 2 (§4, `main.tsx` + `index.css`):** pesos 500/600/700/800 importados de
+  `@fontsource/baloo-2` (local/offline, NO @import de Google Fonts; se bundlean los .woff2).
+  `--font-body` cambió de `system-ui` a `"Baloo 2", ui-sans-serif, system-ui, sans-serif`;
+  `--font-display` (mono pixel) sin cambio. Para que TODO el chrome herede la fuente sin tocar
+  cada componente, se mapeó también `--font-sans` (la pila sans de Tailwind) a Baloo 2 y se fijó
+  `body { font-family: var(--font-body); font-weight: 500 }` (peso base medium, look Duolingo).
+  `--radius-card` subió de 0.75rem a 1rem (cards más redondas). NO se tocó la escala tipográfica
+  ni la paleta.
+- **B. Botón 3D estilo Duolingo (§2, `src/ui/components/Button.tsx` NUEVO):** `motion.button` de
+  `motion/react`. Reposo: cara `--color-primary`, borde inferior 3D SÓLIDO de 4px
+  (`box-shadow: 0 4px 0 var(--color-primary-press)`, blur 0) + highlight interno
+  `inset 0 1px 0 rgb(255 255 255 / 0.25)`, radio `--radius-cta`, texto Baloo 2 bold blanco, alto
+  táctil `py-4` mín. Token nuevo `--shadow-btn-3d` agregado al @theme. Press físico:
+  `whileTap={{ y: 4, boxShadow: <colapsado a 0 0 0> }}` con spring `{ stiffness: 600, damping: 20 }`
+  (regreso con micro-overshoot). Variantes: `primary` (default, rosa), `secondary` (cara surface,
+  borde border, texto ink — CTA sobrios), `destructive` (cara blanca, borde+texto danger, sin
+  fiesta). Disabled queda hundido (y:4, sombra colapsada) + opacity 0.7. `useReducedMotion()` de
+  `motion/react`: sin spring si el usuario lo pide (respeta el guard global). Drop-in: API
+  `children/onClick/variant/disabled/type/className`.
+- **C. Botón aplicado a TODOS los CTA primarios:** "LO HICE" y "Sí lo hice (tarde)"
+  (CompleteMissionScreen, primary), "Crear personaje" (CreateCharacterScreen), "Confirmar misión"
+  (CreateMissionScreen), "Continuar" (MissionResultScreen y LevelScene), "Iniciar partida"
+  (StartScreen), "+ Crear nueva misión" (ProfileScreen), "Empezar" del handoff (PresenterDialog,
+  que también pasa a 3D el "Continuar" del cuadro de Cupido de hitos). CTA sobrios de pérdida con
+  `variant="secondary"` y SIN bounce festivo: "Aceptar la pérdida" (CompleteMissionScreen),
+  "Entendido"/"Cerrar este capítulo" (CancellationScene, AbandonmentScene), "Cancelar" del modal de
+  borrado. "Eliminar" del modal con `variant="destructive"`.
+- **Decisiones donde el doc no especificaba (sobre todo los CTA sobrios):** (1) los CTA de pérdida
+  SÍ usan el patrón 3D (se hunden al presionar) pero con `variant="secondary"` (cara clara, sin el
+  rosa de celebración) y el mismo spring rápido sin overshoot festivo añadido: la firma física se
+  mantiene pero el color/peso no celebra (regla 80/20). El spring de la firma es rápido (damping 20,
+  sin rebote llamativo), así que el "rebote" de salida es mínimo y no se lee como fiesta en
+  secondary. (2) "Cargar partida" (StartScreen) pasa por `ImportFileButton` (file picker compartido
+  con DataScreen): se dejó como botón secundario flat (no 3D) para NO derivar el cambio a DataScreen;
+  "Iniciar partida" sí es el 3D primario (es el CTA principal). (3) El "Eliminar personaje" del fondo
+  del Perfil es un text-link discreto por diseño (abre el modal); el botón 3D `destructive` se aplicó
+  al CTA real "Eliminar" DENTRO del modal de confirmación. (4) El "Continuar" del cuadro de Cupido
+  (PresenterDialog `cta`) también se elevó al 3D primario por ser el mismo componente. (5) Para que
+  el body herede Baloo 2 globalmente se mapeó `--font-sans` además de `--font-body` (Tailwind v4 usa
+  `--font-sans` para el default del body); ambos apuntan a Baloo 2.
+- **Tests:** sin tests nuevos (el botón es presentación/motion; no hay lógica pura nueva). Se
+  conservan los 172 de la Ola 4. `npm run lint`, `npm run build` (tsc + vite) y `npm run test`
+  corridos localmente: todo limpio.
+- **Revisar en navegador (verificación del Director):** (1) **el botón que se hunde**: tocar
+  cualquier CTA primario ("LO HICE", "Continuar", "Crear personaje") debe BAJAR ~4px y el borde
+  inferior 3D colapsar simultáneamente (sensación de tecla física), rebotando levemente al soltar;
+  (2) **la fuente Baloo en el chrome**: todo el texto de cards/botones/bocadillos/labels se ve
+  redondo y un poco más bold, mientras "+X 💕" y "Nivel N" siguen en la mono pixel (sin cambio);
+  (3) **los CTA sobrios que NO rebotan festivo**: "Aceptar la pérdida", "Entendido" de
+  cancelación/abandono y "Eliminar" deben verse claros/sobrios (no rosa de celebración), aunque
+  conservan el hundir físico; (4) **prefers-reduced-motion** activado: el press NO anima (el botón
+  cambia de estado sin spring), respetando el guard global. Nota: el botón usa `motion`; si algún
+  CTA quedara sin el efecto, revisar que el import de `motion/react` resolvió.
 
 ### 2026-06-14: Fase 4 Ola 4 — cohesión fina: idle breathe, bocadillo unificado, barrido de tokens
 - Última ola visual (fuente: `equipo/fase4/direccion-visual.md` §6 "Ola 4" + §2 principios 3 y 5).

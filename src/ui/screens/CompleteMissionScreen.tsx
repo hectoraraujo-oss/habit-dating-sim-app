@@ -11,6 +11,7 @@ import { daysBetween } from '../../game/dates';
 import { calcHeartsEarned } from '../../game/hearts';
 import { DIFFICULTY_LABEL, formatDeadline, formatShortDate } from '../format';
 import { Sprite } from '../components/Sprite';
+import { Button } from '../components/Button';
 
 interface CompleteMissionScreenProps {
   mission: Mission;
@@ -75,31 +76,26 @@ export function CompleteMissionScreen({
             <p className="mb-4 rounded-lg border-2 border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
               Esta misión venció. Llegó tarde, pero vale la pena cumplir: ganarás menos corazones.
             </p>
-            <button
-              onClick={guardedComplete}
-              disabled={acting}
-              className="w-full max-w-xs rounded-cta bg-primary px-6 py-5 text-xl font-extrabold text-white shadow-cta transition duration-[120ms] ease-[var(--ease-spring)] hover:bg-primary-press active:scale-95 disabled:opacity-70"
-            >
+            <Button onClick={guardedComplete} disabled={acting} className="max-w-xs text-xl">
               ✓ SÍ LO HICE (TARDE)
-            </button>
+            </Button>
             <p className="mt-3 text-sm text-stone-600">+{lateReward} 💕 por completar con retraso</p>
-            <button
+            {/* CTA sobrio de pérdida (§B): variant secondary, NO festivo. El botón 3D se hunde
+                igual al presionar, pero sin el rosa de celebración. */}
+            <Button
               onClick={guardedAcceptLoss}
               disabled={acting}
-              className="mt-8 w-full max-w-xs rounded-cta bg-stone-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-stone-600 disabled:opacity-70"
+              variant="secondary"
+              className="mt-8 max-w-xs"
             >
               Aceptar la pérdida (−{penalty} 💕)
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <button
-              onClick={guardedComplete}
-              disabled={acting}
-              className="w-full max-w-xs rounded-cta bg-primary px-6 py-6 text-2xl font-extrabold text-white shadow-cta transition duration-[120ms] ease-[var(--ease-spring)] hover:bg-primary-press active:scale-95 disabled:opacity-70"
-            >
+            <Button onClick={guardedComplete} disabled={acting} className="max-w-xs py-6 text-2xl">
               ✓ LO HICE
-            </button>
+            </Button>
             <p className="mt-3 text-sm text-stone-600">+{reward} 💕 al confirmar</p>
 
             <button

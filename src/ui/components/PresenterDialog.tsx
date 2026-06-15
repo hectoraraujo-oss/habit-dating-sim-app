@@ -8,6 +8,7 @@
 
 import type { ReactNode } from 'react';
 import { Cupido, type CupidoPose } from './Cupido';
+import { Button } from './Button';
 
 interface PresenterDialogProps {
   pose: CupidoPose;
@@ -46,17 +47,15 @@ export function PresenterDialog({ pose, onAdvance, onSkip, children, cta }: Pres
 
       <div className="mx-auto w-full max-w-md rounded-2xl border-4 border-pink-300 bg-white p-5 shadow-lg">
         <p className="text-base leading-relaxed text-stone-800">{children}</p>
-        <div className="mt-3 text-right">
+        <div className="mt-3 flex justify-end">
           {cta ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onAdvance();
-              }}
-              className="rounded-xl bg-pink-500 px-5 py-2 font-bold text-white transition hover:bg-pink-600"
-            >
-              {cta}
-            </button>
+            // Botón 3D estilo Duolingo (Ola 5 §2). Compacto y alineado a la derecha; el
+            // stopPropagation evita que el click del fondo (onAdvance) lo dispare dos veces.
+            <div onClick={(e) => e.stopPropagation()} className="w-auto max-w-[14rem]">
+              <Button onClick={onAdvance} className="px-6">
+                {cta}
+              </Button>
+            </div>
           ) : (
             <span className="text-xs text-pink-400">toca para continuar ›</span>
           )}

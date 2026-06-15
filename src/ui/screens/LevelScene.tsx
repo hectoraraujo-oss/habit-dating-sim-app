@@ -16,6 +16,7 @@ import { completedMissionsCount, daysTogether } from '../../game/engine';
 import { LEVEL_STAGE } from '../format';
 import { levelSceneFor } from '../sprites';
 import { HeartBurst } from '../components/HeartBurst';
+import { Button } from '../components/Button';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface LevelSceneProps {
@@ -87,12 +88,9 @@ export function LevelScene({ state, character, newLevel, wedding, today, onConti
         </p>
       </div>
 
-      <button
-        onClick={onContinue}
-        className="mb-4 w-full max-w-xs rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press"
-      >
+      <Button onClick={onContinue} className="mb-4 max-w-xs">
         Continuar
-      </button>
+      </Button>
     </div>
   );
 }

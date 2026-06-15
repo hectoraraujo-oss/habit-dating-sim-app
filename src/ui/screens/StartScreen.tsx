@@ -9,6 +9,7 @@
 
 import { Cupido } from '../components/Cupido';
 import { ImportFileButton } from '../components/ImportFileButton';
+import { Button } from '../components/Button';
 import type { GameState } from '../../types';
 
 interface StartScreenProps {
@@ -32,15 +33,14 @@ export function StartScreen({ onStart, onLoad }: StartScreenProps) {
         </p>
 
         <div className="mt-8 space-y-3">
-          <button
-            onClick={onStart}
-            className="w-full rounded-xl bg-pink-500 px-4 py-3 font-bold text-white transition hover:bg-pink-600"
-          >
-            Iniciar partida
-          </button>
+          {/* "Iniciar partida" = el CTA primario de la app: botón 3D rosa (la firma). */}
+          <Button onClick={onStart}>Iniciar partida</Button>
+          {/* "Cargar partida" pasa por ImportFileButton (file picker, compartido con
+              DataScreen): se mantiene como botón secundario flat, no 3D, para no derivar el
+              cambio a DataScreen. Subordinado al CTA primario. */}
           <ImportFileButton
             label="Cargar partida"
-            className="w-full rounded-xl border-2 border-pink-400 px-4 py-3 font-bold text-pink-600 transition hover:bg-pink-100"
+            className="w-full rounded-cta border-2 border-pink-400 px-4 py-3 font-bold text-pink-600 transition hover:bg-pink-100"
             onValid={onLoad}
           />
         </div>

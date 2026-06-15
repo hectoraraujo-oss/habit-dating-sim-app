@@ -4,6 +4,7 @@
 
 import type { Character, GameState } from '../../types';
 import { completedMissionsCount, daysTogether } from '../../game/engine';
+import { Button } from '../components/Button';
 import { ABANDONMENT_SCENE } from '../sprites';
 
 interface AbandonmentSceneProps {
@@ -60,12 +61,10 @@ export function AbandonmentScene({ state, character, today, onClose }: Abandonme
         )}
       </div>
 
-      <button
-        onClick={onClose}
-        className="mb-4 w-full max-w-xs rounded-cta bg-stone-700 px-4 py-3 font-bold text-white transition hover:bg-stone-600"
-      >
+      {/* CTA sobrio de pérdida (§B 80/20): variant secondary, sin fiesta. */}
+      <Button onClick={onClose} variant="secondary" className="mb-4 max-w-xs">
         {left ? 'Cerrar este capítulo' : 'Entendido'}
-      </button>
+      </Button>
     </div>
   );
 }

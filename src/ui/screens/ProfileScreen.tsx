@@ -15,6 +15,7 @@ import { DIFFICULTY_LABEL, formatDeadline, formatShortDate, LEVEL_STAGE } from '
 import { HeartsBar } from '../components/HeartsBar';
 import { ReactiveBubble } from '../components/ReactiveBubble';
 import { Sprite } from '../components/Sprite';
+import { Button } from '../components/Button';
 
 interface ProfileScreenProps {
   state: GameState;
@@ -168,12 +169,7 @@ export function ProfileScreen({
 
       <footer className="sticky bottom-0 border-t-4 border-pink-200 bg-white px-4 py-3">
         <div className="mx-auto max-w-2xl">
-          <button
-            onClick={onCreateMission}
-            className="w-full rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press"
-          >
-            + Crear nueva misión
-          </button>
+          <Button onClick={onCreateMission}>+ Crear nueva misión</Button>
         </div>
       </footer>
 
@@ -185,18 +181,14 @@ export function ProfileScreen({
               hábitos para siempre.
             </p>
             <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="flex-1 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
-              >
+              <Button onClick={() => setConfirmDelete(false)} variant="secondary" className="flex-1 py-3 text-base">
                 Cancelar
-              </button>
-              <button
-                onClick={onDeleteCharacter}
-                className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-600"
-              >
+              </Button>
+              {/* Acción destructiva (§C): variant destructive (cara blanca, borde+texto danger),
+                  SIN bounce festivo. El botón 3D se hunde pero no celebra. */}
+              <Button onClick={onDeleteCharacter} variant="destructive" className="flex-1 py-3 text-base">
                 Eliminar
-              </button>
+              </Button>
             </div>
           </div>
         </div>

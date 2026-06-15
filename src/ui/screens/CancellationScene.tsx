@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import type { Character, Mission } from '../../types';
 import { DIFFICULTY_LABEL } from '../format';
 import { HeartsBar } from '../components/HeartsBar';
+import { Button } from '../components/Button';
 import { CANCELLATION_SCENE } from '../sprites';
 
 interface CancellationSceneProps {
@@ -85,12 +86,11 @@ export function CancellationScene({ character, mission, auto, onClose }: Cancell
         </p>
       )}
 
-      <button
-        onClick={onClose}
-        className="mt-8 w-full max-w-xs rounded-cta bg-stone-700 px-4 py-3 font-bold text-white transition hover:bg-stone-600"
-      >
+      {/* CTA sobrio de pérdida (§B 80/20): variant secondary, NUNCA festivo. Se hunde como
+          el botón 3D pero sin el rosa de celebración — la pérdida no rebota con fiesta. */}
+      <Button onClick={onClose} variant="secondary" className="mt-8 max-w-xs">
         {atZero ? 'Entendido. No lo olvidaré.' : 'Entendido'}
-      </button>
+      </Button>
     </div>
   );
 }
