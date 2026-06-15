@@ -8,11 +8,18 @@
 // Esta pantalla solo aparece con celebración (R3) o con hito GRANDE. Un hito menor solo
 // llega aquí como pill ligera si COEXISTE con una celebración (para no perder ni saturar).
 // Si no hay celebración ni hito grande, App cae directo al Home/Perfil con toast.
+//
+// Fase 4 Ola 1 (dirección-visual.md §3): aquí corre la secuencia de juice de celebración:
+// sprite pop + corazones flotantes (del sprite), conteo animado del "+X 💕" y llenado +
+// shimmer de la hearts bar. Asimetría 80/20: esto es SOLO la celebración (ruidosa).
 
 import type { Character } from '../../types';
 import type { Celebration, MilestoneReaction } from '../../game/reaction';
 import { PresenterDialog } from '../components/PresenterDialog';
 import { Sprite } from '../components/Sprite';
+import { HeartsBar } from '../components/HeartsBar';
+import { FloatingHearts } from '../components/FloatingHearts';
+import { useCountUp } from '../hooks/useCountUp';
 
 interface MissionResultScreenProps {
   character: Character;
@@ -35,6 +42,11 @@ export function MissionResultScreen({
   // toast ligero dentro de la misma confirmación (no interrumpe con modal).
   const showCupidoBox = milestone !== null && milestone.big;
 
+  // Conteo animado del "+X 💕". El character ya trae el heartsTotal DESPUÉS de la misión;
+  // el "antes" es heartsTotal - heartsEarned (lo que pinta el llenado de la barra).
+  const earned = useCountUp(0, heartsEarned, 800);
+  const heartsBefore = Math.max(0, character.heartsTotal - heartsEarned);
+
   if (showCupidoBox && milestone) {
     // P7-b: el cuadro de Cupido del hito va al FINAL del evento; al reconocerlo, se persiste
     // (acknowledgeMilestone) y se cierra al Home.
@@ -54,22 +66,37 @@ export function MissionResultScreen({
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-pink-50 px-4 py-8 text-center">
-      <Sprite character={character} size={128} />
+    <div className="flex min-h-svh flex-col items-center justify-center bg-bg px-4 py-8 text-center">
+      {/* Sprite con "pop" + corazones flotantes que nacen de él (celebración). */}
+      <div className="relative">
+        {/* key fuerza el remontaje del pop al entrar a la pantalla. */}
+        <div key={character.id} className="animate-happy-pop">
+          <Sprite character={character} size={128} />
+        </div>
+        {heartsEarned > 0 && <FloatingHearts />}
+      </div>
+
       {/* +💕 solo cuando vino de completar una misión; un hito al abrir el Perfil no suma. */}
       {heartsEarned > 0 && (
-        <h1 className="mt-4 text-2xl font-extrabold text-pink-600">+{heartsEarned} 💕</h1>
+        <h1 className="mt-4 font-display text-3xl font-extrabold text-love">+{earned} 💕</h1>
       )}
-      <p className="mt-1 text-sm text-stone-500">{character.name}</p>
+      <p className="mt-1 text-sm text-ink-soft">{character.name}</p>
+
+      {/* Hearts bar: se llena desde el valor de antes, cuenta y hace shimmer al terminar. */}
+      {heartsEarned > 0 && (
+        <div className="mt-4 w-full max-w-xs">
+          <HeartsBar character={character} animateFromHearts={heartsBefore} />
+        </div>
+      )}
 
       {/* R3: línea extra de celebración del personaje (sin tocar corazones). */}
       {celebration && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border-2 border-pink-200 bg-white px-4 py-3">
-          <p className="text-sm italic leading-relaxed text-stone-700">
+        <div className="mt-4 w-full max-w-sm rounded-xl border-2 border-border bg-surface px-4 py-3">
+          <p className="text-sm italic leading-relaxed text-ink">
             “{celebration.characterLine}”
           </p>
           {celebration.cupidoLine && (
-            <p className="mt-1 text-xs text-pink-500">Cupido: {celebration.cupidoLine}</p>
+            <p className="mt-1 text-xs text-love">Cupido: {celebration.cupidoLine}</p>
           )}
         </div>
       )}
@@ -86,7 +113,7 @@ export function MissionResultScreen({
           if (milestone) onAcknowledgeMilestone(milestone.id);
           onContinue();
         }}
-        className="mt-8 w-full max-w-xs rounded-xl bg-pink-500 px-4 py-3 font-bold text-white transition hover:bg-pink-600"
+        className="mt-8 w-full max-w-xs rounded-cta bg-primary px-4 py-3 font-bold text-white shadow-cta transition hover:bg-primary-press"
       >
         Continuar
       </button>

@@ -1,6 +1,6 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Motor de reactividad (R2+R3+A1) construido — siguiente: revisión del Director (sobre todo milestonesShown vs C1) + arte real de Cupido (P2) + Bloque 4 (recap de regreso)
+## Estado actual: Fase 4 Ola 1 visual construida (tokens de diseño + secuencia de juice al completar misión) — siguiente: verificación manual del Director en navegador (secuencia de completar, conteo, partículas, prefers-reduced-motion) + Olas 2-3 del pulido visual (at-risk, penalización sobria, level-scene/boda)
 
 **Motor de reactividad (2026-06-14, decisión P8-a; spec del vault en
 `projects/habit-dating-sim/equipo/mecanicas/motor-reactividad-spec.md`):** construidas las tres
@@ -161,6 +161,63 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 1 visual — tokens + secuencia de completar misión
+- Ola 1 del pulido visual (fuente de verdad: `equipo/fase4/direccion-visual.md` §1 y la
+  subsección "Secuencia completar misión" de §3). SOLO tokens + la celebración al completar.
+  NO se construyó at-risk, penalización sobria, level-scene ni boda (Olas 2-3). **160 tests en
+  verde** (154 + 6 nuevos de `useCountUp`), lint y build limpios. NO se agregó ninguna
+  dependencia (decisión del Director: CSS puro + Web Animations/rAF). NO se tocó git.
+- **Tokens (`src/index.css`, antes solo importaba Tailwind):** bloque `@theme` con los valores
+  EXACTOS del doc — roles de color (bg, surface, surface-soft, border, primary, primary-press,
+  love, love-soft, risk, risk-strong, danger, milestone, ink/soft/faint, scene-dark,
+  scene-abandon), fuentes display(mono)/body(sans), radios (card/cta/pill), sombras
+  (card/cta/celebrate) y easings (--ease-spring, --ease-out-soft, --ease-in-quiet). Generan
+  utilities (`bg-love`, `text-milestone`, `shadow-cta`, `rounded-cta`, etc.; verificado en el
+  CSS compilado). `@keyframes` happy-pop, float-heart, bar-shimmer + sus clases
+  `.animate-*`. Guard global `@media (prefers-reduced-motion: reduce)` que colapsa animaciones
+  y transiciones a 1ms.
+- **Hook `useCountUp(from, to, durationMs=800)` (`src/ui/hooks/useCountUp.ts`):** conteo con
+  requestAnimationFrame. En prefers-reduced-motion, duración 0, sin cambio o sin rAF setea el
+  valor final directo (el estado nace en `to` vía initializer perezoso, sin setState en efecto).
+  La matemática vive en `countUpValue` (pura, testeable sin DOM): redondea a entero y el último
+  frame cae EXACTO en `to`. Tests del hook en `useCountUp.test.ts` (6 `it`: progress 0 = from,
+  progress >=1 = to exacto, rango/monotonía dentro de [from,to], clamp de negativos, count-DOWN,
+  enteros).
+- **Partículas `FloatingHearts` (`src/ui/components/FloatingHearts.tsx`):** CSS puro, 5-7 💕 que
+  nacen del sprite y suben (keyframe float-heart, stagger 60ms, deriva-X aleatoria ±20px vía
+  `--drift`). La aleatoriedad se congela en un initializer perezoso de useState (no re-aleatoriza
+  en re-render; cumple la regla de pureza del nuevo plugin react-hooks).
+- **`HeartsBar` (modificado):** corazón/relleno SIEMPRE `--color-love`, vacío `--color-love-soft`,
+  borde `--color-border` (cohesión del doc). Nueva prop opcional `animateFromHearts`: la barra
+  se llena con transition-[width] 800ms `--ease-out-soft` desde el progreso "antes", el número
+  cuenta con useCountUp y dispara `bar-shimmer` una vez al terminar (~820ms). Sin la prop, el
+  comportamiento es idéntico al anterior (pinta el ancho directo).
+- **`MissionResultScreen` (modificado):** corre la secuencia de juice — sprite con
+  `animate-happy-pop`, FloatingHearts saliendo del sprite, "+X 💕" con conteo animado
+  (display mono, `--color-love`) y HeartsBar con `animateFromHearts = heartsTotal - heartsEarned`.
+  Migrado a tokens (bg-bg, text-ink-soft, border/surface, primary/shadow-cta).
+- **`CompleteMissionScreen` (modificado):** anti double-tap — el CTA "LO HICE"/"SÍ LO HICE (TARDE)"
+  y "Aceptar la pérdida" se desactivan al instante en el primer toque (estado `acting`, guardas
+  `guardedComplete`/`guardedAcceptLoss`); press-in `active:scale-95` con `--ease-spring` 120ms;
+  radio unificado al token `rounded-cta` y shadow `shadow-cta`. La penalización (cancelar) NO se
+  tocó en su lógica; solo el radio/disabled de bajo riesgo.
+- Decisiones donde el doc no especificaba: (1) el valor "antes" de la barra/conteo se deriva como
+  `heartsTotal - heartsEarned` (el character que llega a MissionResultScreen ya trae el total
+  DESPUÉS de la misión); (2) el hook expone su matemática como función pura `countUpValue` para
+  poder testearla sin DOM/rAF (el entorno de Vitest es `node`, sin window); (3) el "ease-out-soft"
+  del conteo se aproxima con un ease-out cúbico en JS (el bezier exacto vive en CSS para width);
+  (4) la barra usa un flag `moved` + ratios derivados en vez de un estado de ratio, para no
+  llamar setState síncrono dentro del efecto (regla nueva del plugin react-hooks); (5) el shimmer
+  se dispara a ~820ms (apenas después de la transición de 800ms del width).
+- **Revisar en navegador con cuidado (verificación manual del Director):** la secuencia de
+  completar (sprite pop + partículas + conteo + llenado de barra ocurre en
+  `MissionResultScreen`, que solo aparece cuando hay celebración R3 o hito grande — para verla en
+  un caso simple, completar misiones hasta que el motor de reactividad dispare una celebración);
+  que el "+X 💕" cuente y la barra se llene y haga shimmer; que las partículas naden del sprite y
+  suban con deriva; y que con prefers-reduced-motion activado todo colapse (sin pop, sin float,
+  conteo en valor final directo). Nota: el sprite "feliz" hoy es el placeholder (no hay sprite
+  feliz dedicado aún); el "pop" sí corre sobre el sprite actual.
 
 ### 2026-06-14 — Pulido Fase 4 ola A — clamp M2, fechas es-MX, hito menor toast, nudge de respaldo
 - Cuatro arreglos de pulido de bajo riesgo. NO se tocó la economía de corazones, niveles ni
