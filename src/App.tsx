@@ -119,6 +119,10 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
   const [startupScenes, setStartupScenes] = useState<StartupScene[]>(init.startupScenes);
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
   const [toast, setToast] = useState<string | null>(null);
+  // Personaje recién creado: su card aterriza con animación de "nacimiento" al volver al
+  // Home (dirección-visual.md §3 "Crear personaje"). Se limpia tras consumirse (un solo
+  // aterrizaje, no en cada render del Home).
+  const [justBornId, setJustBornId] = useState<string | null>(null);
 
   useEffect(() => {
     saveState(state);
@@ -145,6 +149,7 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
       return;
     }
     setState(result.state);
+    setJustBornId(result.character.id);
     setScreen({ name: 'home' });
     setToast(`${name} se mudó a la habitación ${result.character.slotNumber} 💌`);
   }
@@ -345,6 +350,8 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
           <HomeScreen
             state={state}
             today={today}
+            justBornId={justBornId}
+            onBirthSeen={() => setJustBornId(null)}
             onOpenProfile={handleOpenProfile}
             onCreateCharacter={() => setScreen({ name: 'create-character' })}
             onCreateMission={(characterId) =>

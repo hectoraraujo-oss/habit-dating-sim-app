@@ -1,6 +1,6 @@
 # PROGRESO — Habit Dating Sim
 
-## Estado actual: Fase 4 Ola 2 — at-risk drama (suspiro idle + borde que respira + escalada 18-20 días + banner de tristeza en el Perfil) y penalización sobria (CancellationScene con descenso único del número, barra que drena sin shimmer, grayscale; rojo solo en el número de pérdida). Asimetría 80/20 completa en su lado sobrio. 167 tests verdes, lint y build limpios. Siguiente: verificación manual del Director en navegador (at-risk con suspiro/breathe/escalada, cancelación sobria, prefers-reduced-motion) + Ola 3 del pulido visual (level-scene cinematográfica/boda amplificada, aterrizaje de card al crear personaje)
+## Estado actual: Fase 4 Ola 3 — el clímax del 80% (la celebración mayor). LevelScene cinematográfica (fade-in del fondo + imagen con entrada scale 1.04->1 + título display con pop+glow + burst radial de ~14 corazones desde el centro), variante BODA amplificada en la MISMA pantalla (~21 partículas con 💍/💕, título amber, glow que pulsa 2 veces), y nacimiento de personaje (la card aterriza scale 0.85->1 + latido del sprite al aparecer en el Home, una sola vez). prefers-reduced-motion colapsa a fade simple (sin burst). NO se tocó at-risk/penalización (Olas 1-2) ni la AbandonmentScene. 172 tests verdes (167 + 5 de makeBurst), lint y build limpios. Siguiente: verificación manual del Director en navegador (subir de nivel normal, boda amplificada, crear personaje con su aterrizaje, prefers-reduced-motion)
 
 **Motor de reactividad (2026-06-14, decisión P8-a; spec del vault en
 `projects/habit-dating-sim/equipo/mecanicas/motor-reactividad-spec.md`):** construidas las tres
@@ -161,6 +161,66 @@ Decisiones menores tomadas al implementar (documentadas, sin objeción de Hector
 - Estadísticas de racha y consistencia
 
 ## Historial de sesiones
+
+### 2026-06-14: Fase 4 Ola 3 — nivel/boda cinematográficos + nacimiento de personaje
+- Ola 3 del pulido visual = el clímax del 80% (la celebración mayor). Fuente: `equipo/fase4/
+  direccion-visual.md` §3 subsecciones "Subir de nivel (celebración mayor)" y "Crear personaje".
+  NO se tocó at-risk/penalización (Olas 1-2) ni la AbandonmentScene (es pérdida, se pule aparte).
+  **172 tests en verde** (167 + 5 nuevos de `makeBurst`), lint y build limpios. Sin dependencias
+  nuevas (CSS puro + rAF). NO se tocó git.
+- **CSS (`src/index.css`):** keyframes nuevos `scene-fade-in` (fondo de escena, "entramos a otro
+  lugar", 300ms), `scene-image-in` (imagen cinematográfica scale 1.04->1, 600ms `--ease-out-soft`),
+  `title-glow` (happy-pop + un pulso de glow `--shadow-celebrate`), `title-glow-wedding` (glow
+  amber que pulsa DOS veces), `heart-burst` (burst radial: cada partícula viaja por `--angle` a
+  `--distance` y se desvanece) y `card-born` (aterrizaje scale 0.85->1 + opacity, spring, corre
+  una vez al montar). Sus clases `.animate-*`. El guard global de prefers-reduced-motion ya
+  existente las colapsa a 1ms.
+- **LevelScene cinematográfica (A+B, `src/ui/screens/LevelScene.tsx`):** la pantalla entra con
+  fade-in del fondo (`bg-scene-dark`), la imagen de escena hace la entrada cinematográfica, el
+  título display (font-display mono) entra con happy-pop + glow, y un **burst de ~14 corazones
+  desde el centro** (componente `HeartBurst`, stagger 40ms). **Variante BODA amplificada** (misma
+  pantalla, NO otra): ~50% más partículas (21 vs 14), mezcla 💍/💕 en el burst, título en
+  `--color-milestone` (amber) y el glow pulsa 2 veces. Migrada a tokens (scene-dark, milestone,
+  rounded-card/cta, primary, shadow-cta). Copy/narrativa intactos.
+- **HeartBurst (`src/ui/components/HeartBurst.tsx` + `heartBurst.helpers.ts`):** burst radial CSS
+  puro. El helper puro `makeBurst(count, wedding)` (en archivo aparte por la regla
+  react-refresh/only-export-components y para testearlo sin DOM) reparte N partículas en el círculo
+  con jitter, distancia 110-170px y stagger; en boda alterna 💍/💕. El jitter se congela una vez
+  al montar (initializer perezoso de useState). El componente NO se monta con
+  prefers-reduced-motion (hook nuevo `useReducedMotion`): colapsa a fade simple sin parpadeo de
+  partículas.
+- **Nacimiento de personaje (C, `HomeScreen`/CharacterCard + `App.tsx`):** al confirmar un
+  personaje nuevo, App marca `justBornId` y la card que aparece en el Home aterriza con `card-born`
+  (scale 0.85->1 + opacity, 350ms spring) + un latido único (`happy-pop`) sobre el sprite. Solo
+  corre al APARECER, no en cada render: el id se captura una vez al montar HomeScreen (initializer
+  perezoso de useState, que SÍ puede leerse en render) y se avisa al padre (`onBirthSeen`) para
+  limpiar el flag (sin setState en efecto, regla del plugin estricto). HomeScreen se remonta al
+  volver de "crear personaje", así nace con el id nuevo.
+- **Hook nuevo `useReducedMotion` (`src/ui/hooks/useReducedMotion.ts`):** expone
+  `prefersReducedMotion()` + el hook reactivo (se suscribe al matchMedia). Guardado contra
+  entornos sin window. Lo usa LevelScene para decidir si monta el burst.
+- **Decisiones donde el doc no especificaba:** (1) el burst es RADIAL (rotación por `--angle` +
+  translación a `--distance`) en vez de subida vertical como FloatingHearts — el doc pide "desde el
+  centro", lo natural es radial; (2) cantidad de boda fijada en 21 (14 * 1.5 = "50% más"); (3) bajo
+  prefers-reduced-motion el burst NO se monta (no solo se colapsa a 1ms) para evitar el parpadeo de
+  21 partículas; el resto de la escena colapsa con el guard CSS; (4) el "latido" del nacimiento se
+  envolvió el sprite en un `<span>` con happy-pop para no chocar con el grayscale/sigh del Sprite;
+  (5) el helper del burst vive en archivo aparte (`heartBurst.helpers.ts`) por la regla
+  react-refresh; (6) el título de nivel normal se movió a `font-display` (mono pixel) como pide la
+  escala tipográfica del doc.
+- **Tests:** 5 nuevos `it` de `makeBurst` (cantidad + stagger creciente; boda amplifica y mezcla
+  💍/💕; nivel normal solo 💕; variedad de ángulos; distancia en rango 110-170px). El resto de Ola 3
+  es visual.
+- **Revisar en navegador (verificación del Director):** (1) **subir de nivel normal** (completar
+  misiones hasta cruzar un umbral): el fondo oscuro hace fade-in, la imagen entra con un leve
+  zoom-out cinematográfico, el título "Nivel N alcanzado" hace pop + brilla, y ~14 corazones salen
+  disparados del centro en abanico; (2) **la boda amplificada** (llegar a nivel 3): MISMA pantalla
+  pero más intensa — ~21 partículas con 💍 mezclados, título amber, el glow pulsa dos veces; (3)
+  **crear personaje**: al confirmar el nombre, la card aterriza en su slot creciendo desde 85% con
+  un latido del sprite ("nació alguien"); (4) **prefers-reduced-motion** activado: la escena de
+  nivel/boda colapsa a un fade simple SIN burst de corazones, y el aterrizaje de la card es
+  instantáneo. Nota: el arte de escena sigue siendo el placeholder (el zoom-in cinematográfico
+  corre sobre la imagen actual).
 
 ### 2026-06-14: Fase 4 Ola 2 — at-risk drama + penalización sobria
 - Ola 2 del pulido visual = la asimetría 80/20 en su lado sobrio (fuente: `equipo/fase4/
