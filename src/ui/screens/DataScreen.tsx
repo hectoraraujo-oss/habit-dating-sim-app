@@ -13,11 +13,14 @@ interface DataScreenProps {
   today: string;
   onImport: (state: GameState) => void;
   onExported: () => void;
+  // Empezar de nuevo: borra la partida y vuelve a la pantalla de inicio.
+  onReset: () => void;
   onBack: () => void;
 }
 
-export function DataScreen({ state, today, onImport, onExported, onBack }: DataScreenProps) {
+export function DataScreen({ state, today, onImport, onExported, onReset, onBack }: DataScreenProps) {
   const [pendingImport, setPendingImport] = useState<GameState | null>(null);
+  const [pendingReset, setPendingReset] = useState(false);
 
   function handleExport() {
     const blob = new Blob([exportStateJson(state)], { type: 'application/json' });
@@ -75,6 +78,20 @@ export function DataScreen({ state, today, onImport, onExported, onBack }: DataS
             />
           </div>
         </section>
+
+        <section className="rounded-xl border-2 border-stone-200 bg-white p-4">
+          <h2 className="font-semibold text-stone-700">Empezar de nuevo</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Borra esta partida y vuelve a la pantalla de inicio para empezar desde cero. Si quieres
+            guardar lo que tienes, descarga un respaldo antes.
+          </p>
+          <button
+            onClick={() => setPendingReset(true)}
+            className="mt-3 w-full rounded-xl border-2 border-stone-300 px-4 py-3 font-bold text-stone-600 transition hover:border-red-400 hover:text-red-500"
+          >
+            Empezar de nuevo
+          </button>
+        </section>
       </main>
 
       {pendingImport && (
@@ -99,6 +116,34 @@ export function DataScreen({ state, today, onImport, onExported, onBack }: DataS
                 className="flex-1 rounded-lg bg-pink-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-pink-600"
               >
                 Importar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 text-center shadow-xl">
+            <p className="text-sm text-stone-700">
+              ¿Seguro que quieres empezar de nuevo? Esto borra a{' '}
+              {state.characters.length === 1
+                ? 'tu personaje'
+                : `tus ${state.characters.length} personajes`}{' '}
+              y todo tu progreso para siempre. No se puede deshacer.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setPendingReset(false)}
+                className="flex-1 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={onReset}
+                className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-600"
+              >
+                Empezar de nuevo
               </button>
             </div>
           </div>
