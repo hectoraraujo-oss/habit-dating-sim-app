@@ -21,7 +21,7 @@ import {
 } from './game/engine';
 import { reactionFor, type Celebration, type MilestoneReaction } from './game/reaction';
 import { buildStartup, type StartupScene } from './game/startup';
-import { loadState, saveState } from './storage';
+import { createEmptyState, loadState, saveState } from './storage';
 import { StartScreen } from './ui/screens/StartScreen';
 import { OnboardingFlow } from './ui/onboarding/OnboardingFlow';
 import { HomeScreen } from './ui/screens/HomeScreen';
@@ -105,13 +105,28 @@ export default function App() {
     );
   }
 
-  return <Game initialState={gate.initialState} today={today} />;
+  // Empezar de nuevo (desde la pantalla de Respaldo): borra la partida y vuelve a la pantalla
+  // de inicio. El gate re-renderiza a StartScreen y la próxima partida nace de cero (P7-a).
+  function handleResetGame() {
+    saveState(createEmptyState());
+    setGate({ name: 'start' });
+  }
+
+  return <Game initialState={gate.initialState} today={today} onReset={handleResetGame} />;
 }
 
 // Partida onboardeada: corre buildStartup y la máquina de escenas + las 7 pantallas.
 // Recibe initialState ya onboardeado, así que la máquina de escenas nunca evalúa un estado
 // nuevo (Riesgo R1). Es el flujo que existía antes del gate, intacto.
-function Game({ initialState, today }: { initialState: GameState; today: string }) {
+function Game({
+  initialState,
+  today,
+  onReset,
+}: {
+  initialState: GameState;
+  today: string;
+  onReset: () => void;
+}) {
   // Escenas de apertura (checks de hoy + flags pendientes de sesiones anteriores),
   // mostradas en secuencia antes del Home. Lógica pura en src/game/startup.ts.
   const [init] = useState(() => buildStartup(initialState, today));
@@ -458,6 +473,7 @@ function Game({ initialState, today }: { initialState: GameState; today: string 
           today={today}
           onImport={handleImportState}
           onExported={handleExported}
+          onReset={onReset}
           onBack={() => setScreen({ name: 'home' })}
         />
       );
